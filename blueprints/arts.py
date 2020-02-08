@@ -384,6 +384,7 @@ def addArtCharacter(illustID):
 
 @arts_api.route('/<int:illustID>/likes',methods=["PUT"], strict_slashes=False)
 @auth.login_required
+@apiLimiter.limit(handleApiPermission)
 def addArtLike(illustID):
     resp = g.db.edit(
         "UPDATE illust_main SET illustLike = illustLike + 1 WHERE illustID = ?",
@@ -391,4 +392,8 @@ def addArtLike(illustID):
     )
     if not resp:
         return jsonify(status=500, message="Server bombed.")
-    return jsonify(status=200, message="Update succeed.")
+    resp2 = g.db.get(
+        "SELECT illustLike FROM illust_main WHERE illustID = ?",
+        (illustID,)
+    )
+    return jsonify(status=200, message="Update succeed.", likes=resp2[0][0])
