@@ -154,7 +154,7 @@ def destroyArt(illustID):
 @apiLimiter.limit(handleApiPermission)
 def getArt(illustID):
     artData = g.db.get(
-        "SELECT * FROM illust_main natural join info_artist WHERE illustID = ?",
+        "SELECT * FROM illust_main INNER JOIN info_artist ON illust_main.artistID = info_artist.artistID WHERE illustID = ?",
         (illustID,)
     )
     if not len(artData):
@@ -172,17 +172,19 @@ def getArt(illustID):
     )
     return jsonify(status=200, data={
         "illustID": artData[0],
-        "artistID": artData[1],
-        "title": artData[2],
-        "caption": artData[3],
-        "date": artData[4],
-        "pages": artData[5],
-        "like": artData[6],
-        "originUrl": artData[7],
-        "originService": artData[8],
+        "userID": artData[1],
+        "title": artData[3],
+        "caption": artData[4],
+        "date": artData[5],
+        "pages": artData[6],
+        "like": artData[7],
+        "originUrl": artData[8],
+        "originService": artData[9],
+        "nsfw": artData[10],
         "artist": {
-            "name": artData[9],
-            "icon": artData[11],
+            "id": artData[2],
+            "name": artData[13],
+            "icon": artData[15],
         },
         "tag": [[t[0],t[1],t[2]] for t in tagData],
         "chara": [[c[0],c[1]] for c in charaData]
