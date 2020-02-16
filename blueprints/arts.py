@@ -3,7 +3,6 @@ from .authorizator import auth,token_serializer
 from .limiter import apiLimiter,handleApiPermission
 from .recorder import recordApiRequest
 from .convertImages import *
-from werkzeug.utils import secure_filename
 from datetime import datetime
 import os
 import tempfile
@@ -32,6 +31,33 @@ def isNotAllowedFile(filename):
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
 def createArt():
+    '''
+    画像複数対応は面倒くさいのでとりあえずなしにしましょう
+    
+    REQ
+    
+    files["file"]
+    {
+        "file": binary
+    }
+    
+    files["params"]
+    {
+        "title":"Test",
+        "caption":"テストデータ",
+        "originUrl": "元URL",
+        "originService": "元サービス名",
+        //どれか1つが存在するかつあってればOK
+        "artist":{
+            "twitterID":"適当でも",
+            "pixivID":"適当でも",
+            "name":"適当でも"
+        },
+        "tag":["","",""],
+        "chara": ["","",""]
+    }
+    '''
+    #最低限のパラメータ確認
     if "params" not in request.files:
         return jsonify(status=400, message="Params must be included")
     if "file" not in request.files:
@@ -41,61 +67,40 @@ def createArt():
         params = json.loads(params)
     except:
         return jsonify(status=400, message="Invalid params")
-    '''
-    画像複数対応は面倒くさいのでとりあえずなしにしましょう
-    
-    REQ
-    {
-        "title":"Test",
-        "caption":"テストデータ",
-        "originUrl": "元URL",
-        "originService": "元サービス名",
-        "artist":{
-            //どれか1つが存在するかつあってればOK
-            "twitterID":"適当でも",
-            "pixivID":"適当でも",
-            "name":"適当でも"
-        },
-        "tag":["","",""]
-    }
-    '''
     #パラメータ確認
-    requiredParams = set(
-        ("title",
-        "originService")
-    )
+    requiredParams = set(("title","originService"))
     validParams = [
         "title",
         "caption",
         "originUrl",
         "originService",
         "artist",
-        "tag"
+        "tag",
+        "chara",
+        "nsfw"
     ]
     #必須パラメータ確認
     params = {p:params[p] for p in params.keys() if p in validParams}
     if not requiredParams.issubset(params.keys())\
     or "file" not in request.files:
         return jsonify(status=400, message="Request parameters are not satisfied.")
+    #ファイルパラメータ確認
+    file = request.files['file']
+    if isNotAllowedFile(file.filename):
+        return jsonify(status=400, message="Specified image is invalid.")
     #作者パラメータ確認
     if "name" not in params["artist"]\
     and "twitterID" not in params["artist"]\
-    and "pixivsID" not in params["artist"]:
+    and "pixivID" not in params["artist"]:
         return jsonify(status=400, message="Artist paramators are invalid.")
-    # タイトル重複確認
-    if g.db.has(
-        "illust_main",
-        "illustName=?",
-        (params["title"],)
-    ):
-        return jsonify(status=409, message="The art named %s is already exist"%(params["title"]))
-    #ファイルパラメータ確認
-    file = request.files['file']
-    filename = file.filename
-    print(filename)
-    if isNotAllowedFile(filename):
-        return jsonify(status=400, message="Specified image is invalid.")
-    #TODO:　ここで画像重複確認処理を挟む
+    #TODO:　画像重複確認
+    # タイトル重複確認(タイトルの重複は許可する)
+    existsIllusts = g.db.get(
+        "SELECT COUNT(illustID) FROM illust_main WHERE illustName LIKE ?",
+        ("%"+params["title"]+"%",)
+    )
+    if existsIllusts[0][0] > 0:
+        params["title"] += str(existsIllusts[0][0])
     #作者情報取得
     artistName = params["artist"].get("name", None)
     pixivID = params["artist"].get("pixivID", None)
@@ -120,14 +125,16 @@ def createArt():
     )[0][0]
     #作品情報取得
     illustName = params.get("title")
-    illustDescription = params.get("caption", None)
+    illustDescription = params.get("caption", "")
     illustDate = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     illustPage = params.get("pages", "1")
-    illustOriginUrl = params.get("originUrl", None)
+    illustOriginUrl = params.get("originUrl", "")
     illustOriginSite = params.get("originService", "独自")
+    illustNsfw = params.get("nsfw", "0")
+    illustNsfw = "1" if illustNsfw not in ["0","False","false"] else "0"
     #データ登録
     resp = g.db.edit(
-        "INSERT INTO illust_main (artistID,illustName,illustDescription,illustDate,illustPage,illustLike,illustOriginUrl,illustOriginSite,userID) VALUES (?,?,?,?,?,?,?,?,?)",
+        "INSERT INTO illust_main (artistID,illustName,illustDescription,illustDate,illustPage,illustLike,illustOriginUrl,illustOriginSite,userID,nsfw) VALUES (?,?,?,?,?,?,?,?,?,?)",
         (
             str(artistID),
             illustName,
@@ -137,14 +144,36 @@ def createArt():
             "0",
             illustOriginUrl,
             illustOriginSite,
-            str(g.userID)
+            str(g.userID),
+            str(illustNsfw)
         ),
         False
     )
     if not resp:
+        g.db.rollback()
         return jsonify(status=500, message="Server bombed.")
     # 登録した画像のIDを取得
     illustID = g.db.get("SELECT illustID FROM illust_main WHERE illustName=?", (illustName,) )[0][0]
+    #タグ情報取得/作成
+    if "tag" in params.keys():
+        for t in params["tag"]:
+            if not g.db.has("info_tag","tagName=?", (t,)):
+                g.db.edit("INSERT INTO info_tag (tagName) VALUES (?)", (t,), False)
+            tagID = g.db.get("SELECT tagID FROM info_tag WHERE tagName=?",(t,))[0][0]
+            resp = g.db.edit("INSERT INTO illust_tag (illustID,tagID) VALUES (?,?)",(str(illustID),str(tagID)), False)
+            if not resp:
+                g.db.rollback()
+                return jsonify(status=500, message="Server bombed.")
+    #キャラ情報取得/作成
+    if "chara" in params.keys():
+        for t in params["chara"]:
+            if not g.db.has("info_chara","tagName=?", (t,)):
+                g.db.edit("INSERT INTO info_tag (tagName) VALUES (?)", (t,), False)
+            tagID = g.db.get("SELECT charaID FROM info_chara WHERE charaName=?",(t,))[0][0]
+            resp = g.db.edit("INSERT INTO illust_chara (illustID,charaID) VALUES (?,?)",(str(illustID),str(charaID)), False)
+            if not resp:
+                g.db.rollback()
+                return jsonify(status=500, message="Server bombed.")
     #画像保存
     #変換を試みる
     fileDirs = [os.path.join(current_app.config['UPLOAD_FOLDER'], f) for f in ["orig","thumb","small","large"]]
@@ -165,22 +194,13 @@ def createArt():
                         extension
                     )
         except Exception as e:
-            print(e)
             for dir in fileDirs:
                 for extension in fileExtensions:
                     filePath = os.path.join(dir, f"{illustID}."+extension.lower())
                     if os.path.exists(filePath):
                         os.remove(filePath)
+            g.db.rollback()
             return jsonify(status=400, message="Your image is broken.")
-    #タグ情報取得/作成
-    if "tag" in params.keys():
-        for t in params["tag"]:
-            if not g.db.has("info_tag","tagName=?", (t,)):
-                g.db.edit("INSERT INTO info_tag (tagName) VALUES (?)", (t,), False)
-            tagID = g.db.get("SELECT tagID FROM info_tag WHERE tagName=?",(t,))
-            resp = g.db.edit("INSERT INTO illust_tag (illustID,tagID) VALUES (?,?)",(str(illustID),str(tagID)), False)
-            if not resp:
-                return jsonify(status=500, message="Server bombed.")
     g.db.commit()
     return jsonify(status=201, message="Created", illustID=illustID)
 
