@@ -1,9 +1,13 @@
-from flask import Blueprint, g, request, jsonify, escape
+from flask import Blueprint, g, request, jsonify, escape, current_app
 from .authorizator import auth,token_serializer
 from .limiter import apiLimiter,handleApiPermission
 from .recorder import recordApiRequest
+from .convertImages import *
 from werkzeug.utils import secure_filename
 from datetime import datetime
+import os
+import tempfile
+import json
 
 arts_api = Blueprint('arts_api', __name__)
 
@@ -19,16 +23,24 @@ def isNotAllowedFile(filename):
     if '.' not in filename:
         return True
     if filename.rsplit('.', 1)[1].lower()\
-    in ALLOWED_EXTENSIONS:
+    not in ALLOWED_EXTENSIONS:
         return True
     return False
 
-# だいたい完成! (複数画像未サポート 画像重複確認未サポート 複数解像度作成未サポート)
+# だいたい完成! (複数画像未サポート 画像重複確認未サポート
 @arts_api.route('/',methods=["POST"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
 def createArt():
-    params = request.get_json()
+    if "params" not in request.files:
+        return jsonify(status=400, message="Params must be included")
+    if "file" not in request.files:
+        return jsonify(status=400, message="File must be included")
+    try:
+        params = str(request.files['params'].read(), 'utf-8')
+        params = json.loads(params)
+    except:
+        return jsonify(status=400, message="Invalid params")
     '''
     画像複数対応は面倒くさいのでとりあえずなしにしましょう
     
@@ -49,8 +61,8 @@ def createArt():
     '''
     #パラメータ確認
     requiredParams = set(
-        "title",
-        "originUrl"
+        ("title",
+        "originService")
     )
     validParams = [
         "title",
@@ -80,6 +92,7 @@ def createArt():
     #ファイルパラメータ確認
     file = request.files['file']
     filename = file.filename
+    print(filename)
     if isNotAllowedFile(filename):
         return jsonify(status=400, message="Specified image is invalid.")
     #TODO:　ここで画像重複確認処理を挟む
@@ -95,7 +108,8 @@ def createArt():
     ):
         resp = g.db.edit(
             "INSERT INTO info_artist (artistName,twitterID,pixivID) VALUES (?,?,?)",
-            (artistName,pixivID,twitterID)
+            (artistName,pixivID,twitterID),
+            False
         )
         if not resp:
             return jsonify(status=500, message="Server bombed.")
@@ -103,43 +117,71 @@ def createArt():
     artistID = g.db.get(
         "SELECT artistID FROM info_artist WHERE artistName=? OR pixivID=? or twitterID=?",
         (artistName,pixivID,twitterID)
-    )
+    )[0][0]
     #作品情報取得
     illustName = params.get("title")
     illustDescription = params.get("caption", None)
     illustDate = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    illustPage = params.get("pages", 1)
+    illustPage = params.get("pages", "1")
     illustOriginUrl = params.get("originUrl", None)
     illustOriginSite = params.get("originService", "独自")
     #データ登録
     resp = g.db.edit(
         "INSERT INTO illust_main (artistID,illustName,illustDescription,illustDate,illustPage,illustLike,illustOriginUrl,illustOriginSite,userID) VALUES (?,?,?,?,?,?,?,?,?)",
         (
-            artistID,
+            str(artistID),
             illustName,
             illustDescription,
             illustDate,
             illustPage,
-            0,
+            "0",
             illustOriginUrl,
             illustOriginSite,
-            g.userID
-        )
+            str(g.userID)
+        ),
+        False
     )
     if not resp:
         return jsonify(status=500, message="Server bombed.")
     # 登録した画像のIDを取得
-    illustID = g.db.get("SELECT illustID FROM illust_main WHERE illustName=?", illustName)[0][0]
+    illustID = g.db.get("SELECT illustID FROM illust_main WHERE illustName=?", (illustName,) )[0][0]
     #画像保存
-    file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+    #変換を試みる
+    fileDirs = [os.path.join(current_app.config['UPLOAD_FOLDER'], f) for f in ["orig","thumb","small","large"]]
+    fileExtensions = ["PNG","WEBP"]
+    with tempfile.TemporaryDirectory() as temp_path:
+        filePath = os.path.join(temp_path, f"{illustID}_orig.png")
+        file.save(filePath)
+        try:
+            origImg = Image.open(filePath)
+            thumbImg = createThumb(origImg)
+            smallImg = createSmall(origImg)
+            largeImg = createLarge(origImg)
+            files = [origImg, thumbImg, smallImg, largeImg]
+            for data,dir in zip(files,fileDirs):
+                for extension in fileExtensions:
+                    data.save(
+                        os.path.join(dir, f"{illustID}."+extension.lower()),
+                        extension
+                    )
+        except Exception as e:
+            print(e)
+            for dir in fileDirs:
+                for extension in fileExtensions:
+                    filePath = os.path.join(dir, f"{illustID}."+extension.lower())
+                    if os.path.exists(filePath):
+                        os.remove(filePath)
+            return jsonify(status=400, message="Your image is broken.")
     #タグ情報取得/作成
-    for t in params["tag"]:
-        if not g.db.has("info_tag","tagName=?", (t,)):
-            g.db.edit("INSERT INTO info_tag (tagName) VALUES (?)", (t,))
-        tagID = g.db.get("SELECT tagID FROM info_tag WHERE tagName=?",(t,))
-        resp = g.db.edit("INSERT INTO illust_tag (illustID,tagID) VALUES (?,?)",(illustID,tagID))
-        if not resp:
-            return jsonify(status=500, message="Server bombed.")
+    if "tag" in params.keys():
+        for t in params["tag"]:
+            if not g.db.has("info_tag","tagName=?", (t,)):
+                g.db.edit("INSERT INTO info_tag (tagName) VALUES (?)", (t,), False)
+            tagID = g.db.get("SELECT tagID FROM info_tag WHERE tagName=?",(t,))
+            resp = g.db.edit("INSERT INTO illust_tag (illustID,tagID) VALUES (?,?)",(str(illustID),str(tagID)), False)
+            if not resp:
+                return jsonify(status=500, message="Server bombed.")
+    g.db.commit()
     return jsonify(status=201, message="Created", illustID=illustID)
 
 @arts_api.route('/<int:illustID>',methods=["DELETE"], strict_slashes=False)
