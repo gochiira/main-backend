@@ -15,7 +15,7 @@ Web管理者キーはこれ(いつかサイト上に難読化して埋め込む�
 Bearer eyJhbGciOiJIUzI1NiJ9.eyJpZCI6MSwic2VxIjoyLCJwZXJtaXNzaW9uIjo1fQ.5_UXRraCZuqOPs5X53czpm_pQhpEaudpSu5ujZOrbLU
 
 全体管理者キー(絶対に載せないこと) 権限:9
-未登録
+Bearer eyJhbGciOiJIUzI1NiJ9.eyJpZCI6Miwic2VxIjoxLCJwZXJtaXNzaW9uIjo5fQ.tLS3QO91IWv80TyH_KZTHo6wMSG2csAN0jQFWk4Zo2U
 
 投稿用管理者キー(スクレイピングした際にはこれで投稿) 権限:3
 未登録
@@ -53,7 +53,7 @@ def verify_token(token):
         g.userApiSeq = data['seq']
         g.userPermission = data['permission']
         if g.db.has(
-            "user_main",
+            "data_user",
             "userID=? AND userApiSeq=? AND userPermission=?",
             (g.userID, g.userApiSeq, g.userPermission)
         ):

@@ -96,7 +96,7 @@ def createArt():
     #TODO:　画像重複確認
     # タイトル重複確認(タイトルの重複は許可する)
     existsIllusts = g.db.get(
-        "SELECT COUNT(illustID) FROM illust_main WHERE illustName LIKE ?",
+        "SELECT COUNT(illustID) FROM data_illust WHERE illustName LIKE ?",
         ("%"+params["title"]+"%",)
     )
     if existsIllusts[0][0] > 0:
@@ -124,7 +124,7 @@ def createArt():
         (artistName,pixivID,twitterID)
     )[0][0]
     #作品情報取得
-    illustName = params.get("title")
+    illustName = params.get("title", "")
     illustDescription = params.get("caption", "")
     illustDate = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     illustPage = params.get("pages", "1")
@@ -134,7 +134,7 @@ def createArt():
     illustNsfw = "1" if illustNsfw not in ["0","False","false"] else "0"
     #データ登録
     resp = g.db.edit(
-        "INSERT INTO illust_main (artistID,illustName,illustDescription,illustDate,illustPage,illustLike,illustOriginUrl,illustOriginSite,userID,nsfw) VALUES (?,?,?,?,?,?,?,?,?,?)",
+        "INSERT INTO data_illust (artistID,illustName,illustDescription,illustDate,illustPage,illustLike,illustOriginUrl,illustOriginSite,userID,illustNsfw) VALUES (?,?,?,?,?,?,?,?,?,?)",
         (
             str(artistID),
             illustName,
@@ -153,24 +153,24 @@ def createArt():
         g.db.rollback()
         return jsonify(status=500, message="Server bombed.")
     # 登録した画像のIDを取得
-    illustID = g.db.get("SELECT illustID FROM illust_main WHERE illustName=?", (illustName,) )[0][0]
+    illustID = g.db.get("SELECT illustID FROM data_illust WHERE illustName=?", (illustName,) )[0][0]
     #タグ情報取得/作成
     if "tag" in params.keys():
         for t in params["tag"]:
             if not g.db.has("info_tag","tagName=?", (t,)):
-                g.db.edit("INSERT INTO info_tag (tagName) VALUES (?)", (t,), False)
+                g.db.edit("INSERT INTO info_tag (tagName,tagType) VALUES (?,0)", (t,), False)
             tagID = g.db.get("SELECT tagID FROM info_tag WHERE tagName=?",(t,))[0][0]
-            resp = g.db.edit("INSERT INTO illust_tag (illustID,tagID) VALUES (?,?)",(str(illustID),str(tagID)), False)
+            resp = g.db.edit("INSERT INTO data_tag (illustID,tagID) VALUES (?,?)",(str(illustID),str(tagID)), False)
             if not resp:
                 g.db.rollback()
                 return jsonify(status=500, message="Server bombed.")
     #キャラ情報取得/作成
     if "chara" in params.keys():
         for t in params["chara"]:
-            if not g.db.has("info_chara","tagName=?", (t,)):
-                g.db.edit("INSERT INTO info_tag (tagName) VALUES (?)", (t,), False)
-            tagID = g.db.get("SELECT charaID FROM info_chara WHERE charaName=?",(t,))[0][0]
-            resp = g.db.edit("INSERT INTO illust_chara (illustID,charaID) VALUES (?,?)",(str(illustID),str(charaID)), False)
+            if not g.db.has("info_tag","tagName=?", (t,)):
+                g.db.edit("INSERT INTO info_tag (tagName,tagType) VALUES (?,1)", (t,), False)
+            tagID = g.db.get("SELECT tagID FROM info_tag WHERE tagName=?",(t,))[0][0]
+            resp = g.db.edit("INSERT INTO data_tag (illustID,tagID) VALUES (?,?)",(str(illustID),str(tagID)), False)
             if not resp:
                 g.db.rollback()
                 return jsonify(status=500, message="Server bombed.")
@@ -201,6 +201,7 @@ def createArt():
                         os.remove(filePath)
             g.db.rollback()
             return jsonify(status=400, message="Your image is broken.")
+    recordApiRequest(g.userID, "addArt", param1=illustID)
     g.db.commit()
     return jsonify(status=201, message="Created", illustID=illustID)
 
@@ -216,7 +217,7 @@ def destroyArt(illustID):
 @apiLimiter.limit(handleApiPermission)
 def getArt(illustID):
     artData = g.db.get(
-        "SELECT * FROM illust_main INNER JOIN info_artist ON illust_main.artistID = info_artist.artistID WHERE illustID = ?",
+        "SELECT * FROM data_illust INNER JOIN info_artist ON data_illust.artistID = info_artist.artistID WHERE illustID = ?",
         (illustID,)
     )
     if not len(artData):
@@ -224,12 +225,12 @@ def getArt(illustID):
     artData = artData[0]
     #タグ情報取得
     tagData = g.db.get(
-        "SELECT tagID,tagName,nsfw FROM illust_tag natural join info_tag WHERE illustID = ?",
+        "SELECT tagID,tagName,tagNsfw FROM data_tag natural join info_tag WHERE illustID = ? AND tagType=0",
         (illustID,)
     )
     #キャラ情報取得
     charaData = g.db.get(
-        "SELECT charaID,charaName FROM illust_chara natural join info_chara WHERE illustID = ?",
+        "SELECT tagID,tagName,tagNsfw FROM data_tag natural join info_tag WHERE illustID = ? AND tagType=1",
         (illustID,)
     )
     return jsonify(status=200, data={
@@ -245,8 +246,7 @@ def getArt(illustID):
         "nsfw": artData[10],
         "artist": {
             "id": artData[2],
-            "name": artData[13],
-            "icon": artData[15],
+            "name": artData[13]
         },
         "tag": [[t[0],t[1],t[2]] for t in tagData],
         "chara": [[c[0],c[1]] for c in charaData]
@@ -279,7 +279,7 @@ def editArt(illustID):
             return jsonify(status=400, message="Specified artist was not found.")
     for p in params.keys():
         resp = g.db.edit(
-            "UPDATE `illust_main` SET `%s`=? WHERE illustID=?"%(p),
+            "UPDATE `data_illust` SET `%s`=? WHERE illustID=?"%(p),
             (params[p],illustID,)
         )
         if not resp:
@@ -301,11 +301,11 @@ def deleteArtTag(illustID):
         tagID = int(params.get("tagID"))
     except:
         return jsonify(status=400, message="tagID is invalid, or not specified.")
-    isExist = g.db.has("illust_tag","illustID=? AND tagID=?",(illustID,tagID,))
+    isExist = g.db.has("data_tag","illustID=? AND tagID=?",(illustID,tagID,))
     if not isExist:
         return jsonify(status=400, message="The tag is not registered to the art.")
     resp = g.db.edit(
-        "DELETE FROM `illust_tag` "\
+        "DELETE FROM `data_tag` "\
         + "WHERE illustID = ? AND tagID = ?",
         (illustID,tagID)
     )
@@ -320,7 +320,7 @@ def getArtTag(illustID):
     '''指定されたイラスト付属のタグ一覧を、フルデータとして取得する'''
     resp = g.db.get(
         "SELECT * FROM info_tag "\
-        + "NATURAL JOIN (SELECT tagID FROM illust_tag WHERE illustID=?)",
+        + "NATURAL JOIN (SELECT tagID FROM data_tag WHERE illustID=?) WHERE tagType=0",
         (illustID,)
     )
     if not len(resp):
@@ -332,8 +332,7 @@ def getArtTag(illustID):
             "tagID": r[0],
             "name": r[1],
             "caption": r[2],
-            "nsfw": r[3],
-            "endpoint": r[4]
+            "nsfw": r[3]
         } for r in resp]
     )
     
@@ -345,17 +344,17 @@ def addArtTag(illustID):
     if not params:
         return jsonify(status=400, message="Request parameters are not satisfied.")
     try:
-        charaID = int(params.get("tagID"))
+        tagID = int(params.get("tagID"))
         isExist = g.db.has("info_tag","tagID=?",(tagID,))
         if tagID < 0 or not isExist:
             raise ValueError()
     except:
         return jsonify(status=400, message="tagID is invalid, or not specified.")
-    isExist = g.db.has("illust_tag","illustID=? AND tagID=?",(illustID,tagID,))
+    isExist = g.db.has("data_tag","illustID=? AND tagID=?",(illustID,tagID,))
     if isExist:
         return jsonify(status=400, message="The tag is already registered to the art.")
     resp = g.db.edit(
-        "INSERT INTO `illust_tag` (`illustID`,`charaID`) "\
+        "INSERT INTO `data_tag` (`illustID`,`tagID`) "\
         + "VALUES (?,?);",
         (illustID,tagID)
     )
@@ -375,16 +374,16 @@ def deleteArtCharacter(illustID):
     if not params:
         return jsonify(status=400, message="Request parameters are not satisfied.")
     try:
-        charaID = int(params.get("charaID"))
+        tagID = int(params.get("charaID"))
     except:
         return jsonify(status=400, message="charaID is invalid, or not specified.")
-    isExist = g.db.has("illust_chara","illustID=? AND charaID=?",(illustID,charaID,))
+    isExist = g.db.has("data_tag","illustID=? AND tagID=?",(illustID,tagID,))
     if not isExist:
         return jsonify(status=400, message="The character is not registered to the art.")
     resp = g.db.edit(
-        "DELETE FROM `illust_chara` "\
-        + "WHERE illustID = ? AND charaID = ?",
-        (illustID,charaID)
+        "DELETE FROM `data_tag` "\
+        + "WHERE illustID = ? AND tagID = ?",
+        (illustID,tagID)
     )
     if not resp:
         return jsonify(status=500, message="Server bombed.")
@@ -396,8 +395,8 @@ def deleteArtCharacter(illustID):
 def getArtCharacter(illustID):
     '''指定されたイラスト付属のキャラ一覧を、フルデータとして取得する'''
     resp = g.db.get(
-        "SELECT * FROM info_chara "\
-        + "NATURAL JOIN (SELECT charaID FROM illust_chara WHERE illustID=?)",
+        "SELECT * FROM info_tag "\
+        + "NATURAL JOIN (SELECT tagID FROM data_tag WHERE illustID=?) WHERE tagType=1",
         (illustID,)
     )
     if not len(resp):
@@ -409,10 +408,7 @@ def getArtCharacter(illustID):
             "charaID": r[0],
             "name": r[1],
             "caption": r[2],
-            "background": r[3],
-            "icon": r[4],
-            "birthday": r[5],
-            "endpoint": r[6]
+            "nsfw": r[3]
         } for r in resp]
     )
     
@@ -424,19 +420,19 @@ def addArtCharacter(illustID):
     if not params:
         return jsonify(status=400, message="Request parameters are not satisfied.")
     try:
-        charaID = int(params.get("charaID"))
-        isExist = g.db.has("info_chara","charaID=?",(charaID,))
-        if charaID < 0 or not isExist:
+        tagID = int(params.get("charaID"))
+        isExist = g.db.has("info_tag","tagID=?",(tagID,))
+        if tagID < 0 or not isExist:
             raise ValueError()
     except:
-        return jsonify(status=400, message="charaID is invalid, or not specified.")
-    isExist = g.db.has("illust_chara","illustID=? AND charaID=?",(illustID,charaID,))
+        return jsonify(status=400, message="tagID is invalid, or not specified.")
+    isExist = g.db.has("data_tag","illustID=? AND tagID=?",(illustID,tagID,))
     if isExist:
         return jsonify(status=400, message="The character is already registered to the art.")
     resp = g.db.edit(
-        "INSERT INTO `illust_chara` (`illustID`,`charaID`) "\
+        "INSERT INTO `data_tag` (`illustID`,`tagID`) "\
         + "VALUES (?,?);",
-        (illustID,charaID)
+        (illustID,tagID)
     )
     if not resp:
         return jsonify(status=500, message="Server bombed.")
@@ -451,13 +447,13 @@ def addArtCharacter(illustID):
 @apiLimiter.limit(handleApiPermission)
 def addArtLike(illustID):
     resp = g.db.edit(
-        "UPDATE illust_main SET illustLike = illustLike + 1 WHERE illustID = ?",
+        "UPDATE data_illust SET illustLike = illustLike + 1 WHERE illustID = ?",
         (illustID,)
     )
     if not resp:
         return jsonify(status=500, message="Server bombed.")
     resp2 = g.db.get(
-        "SELECT illustLike FROM illust_main WHERE illustID = ?",
+        "SELECT illustLike FROM data_illust WHERE illustID = ?",
         (illustID,)
     )
     return jsonify(status=200, message="Update succeed.", likes=resp2[0][0])
