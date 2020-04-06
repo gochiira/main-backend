@@ -246,7 +246,10 @@ def getArt(illustID):
         "nsfw": artData[10],
         "artist": {
             "id": artData[2],
-            "name": artData[13]
+            "name": artData[13],
+            "group": artData[15],
+            "pixiv": artData[16],
+            "twitter": artData[17],
         },
         "tag": [[t[0],t[1],t[2]] for t in tagData],
         "chara": [[c[0],c[1]] for c in charaData]

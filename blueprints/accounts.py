@@ -41,7 +41,7 @@ Permission
 LINE_CHANNEL_ID     = "1654004927"
 LINE_CHANNEL_SECRET = "1c67e8e07236559072a2ff4905d79169"
 LINE_ENDPOINT       = "https://api.line.me/oauth2/v2.1/token"
-LINE_REDIRECT_URI_LOGIN     = "http://127.0.0.1:3000/line_callback"
+LINE_REDIRECT_URI_LOGIN     = "http://192.168.0.3:3000/line_callback"
 LINE_REDIRECT_URI_CONNECT   = "http://127.0.0.1:3000/line_connect"
 
 def generateApiKey(accountID):
