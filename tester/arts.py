@@ -4,23 +4,22 @@ cl = BaseClient()
 
 addEndpoint = "/arts"
 params = {
-    "title":"女の子チノちゃん7",
-    "originService":"Pixiv",
+    "title":"ゆっくりチノちゃん",
+    "originService":"描いた",
+    "originUrl": "https://mobile.twitter.com/deep_omado",
+    "imageUrl":"http://192.168.0.3:5000/static/temp/ZjE5NjU5ODc3M2NlNGQ5NWJmNTRjMWJkYWRhMTYwZmQ.raw",
     "artist":{
-        "name":"うみ猫"
+        "name":"お窓"
     },
-    "tag":["神絵師"],
+    "tag": ["デジタル", "素人", "アイコン", "Twitterアイコン", "フリー素材", "黒歴史"],
     "chara":["香風智乃"],
 }
-files = {
-    "file": open("test.jpg","rb"),
-    "params": json.dumps(params)
-}
 # addArt
-resp = cl.post(addEndpoint, files=files).json()
+resp = cl.post(addEndpoint, json=params).json()
 print(resp)
 illustID = resp["illustID"]
 
+'''
 # getArt
 getEndpoint = f"/arts/{illustID}"
 print(cl.get(getEndpoint).text)
@@ -62,3 +61,5 @@ print(cl.put(putEndpoint, json=params).text)
 # addArtLike
 putEndpoint = f"/arts/{illustID}/likes"
 print(cl.put(putEndpoint).text)
+
+'''

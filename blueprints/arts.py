@@ -2,11 +2,18 @@ from flask import Blueprint, g, request, jsonify, escape, current_app
 from .authorizator import auth,token_serializer
 from .limiter import apiLimiter,handleApiPermission
 from .recorder import recordApiRequest
-from .convertImages import *
+from .lib.convertImages import *
+from .lib.pixiv_client import IllustGetter
+from .lib.twitter_client import TweetGetter
 from datetime import datetime
 import os
 import tempfile
 import json
+import shutil
+import traceback
+from tempfile import TemporaryDirectory
+from imghdr import what as what_img
+from urllib.parse import parse_qs as parse_query
 
 arts_api = Blueprint('arts_api', __name__)
 
@@ -14,17 +21,6 @@ arts_api = Blueprint('arts_api', __name__)
 # イラストの投稿関連
 #
 
-ALLOWED_EXTENSIONS = ["gif", "png", "jpg", "jpeg"]
-
-def isNotAllowedFile(filename):
-    if filename == "":
-        return True
-    if '.' not in filename:
-        return True
-    if filename.rsplit('.', 1)[1].lower()\
-    not in ALLOWED_EXTENSIONS:
-        return True
-    return False
 
 # だいたい完成! (複数画像未サポート 画像重複確認未サポート
 @arts_api.route('/',methods=["POST"], strict_slashes=False)
@@ -35,18 +31,12 @@ def createArt():
     画像複数対応は面倒くさいのでとりあえずなしにしましょう
     
     REQ
-    
-    files["file"]
-    {
-        "file": binary
-    }
-    
-    files["params"]
     {
         "title":"Test",
         "caption":"テストデータ",
         "originUrl": "元URL",
         "originService": "元サービス名",
+        "imageUrl": "画像の元URL",
         //どれか1つが存在するかつあってればOK
         "artist":{
             "twitterID":"適当でも",
@@ -54,24 +44,20 @@ def createArt():
             "name":"適当でも"
         },
         "tag":["","",""],
-        "chara": ["","",""]
+        "chara": ["","",""],
+        "nsfw": 0
     }
     '''
     #最低限のパラメータ確認
-    if "params" not in request.files:
-        return jsonify(status=400, message="Params must be included")
-    if "file" not in request.files:
-        return jsonify(status=400, message="File must be included")
-    try:
-        params = str(request.files['params'].read(), 'utf-8')
-        params = json.loads(params)
-    except:
-        return jsonify(status=400, message="Invalid params")
+    params = request.get_json()
+    if not params:
+        return jsonify(status='400', message='bad request: not json')
     #パラメータ確認
     requiredParams = set(("title","originService"))
     validParams = [
         "title",
         "caption",
+        "imageUrl",
         "originUrl",
         "originService",
         "artist",
@@ -80,27 +66,24 @@ def createArt():
         "nsfw"
     ]
     #必須パラメータ確認
+    print(params.items())
     params = {p:params[p] for p in params.keys() if p in validParams}
-    if not requiredParams.issubset(params.keys())\
-    or "file" not in request.files:
-        return jsonify(status=400, message="Request parameters are not satisfied.")
-    #ファイルパラメータ確認
-    file = request.files['file']
-    if isNotAllowedFile(file.filename):
-        return jsonify(status=400, message="Specified image is invalid.")
+    if not requiredParams.issubset(params.keys()):
+        return jsonify(status='400', message='bad request: not enough')
     #作者パラメータ確認
     if "name" not in params["artist"]\
     and "twitterID" not in params["artist"]\
     and "pixivID" not in params["artist"]:
         return jsonify(status=400, message="Artist paramators are invalid.")
+    #画像パラメータ確認
+    if not any([
+        params["imageUrl"].startswith("https://twitter.com/"),
+        params["imageUrl"].startswith("https://www.pixiv.net/"),
+        params["imageUrl"].startswith("https://cdn.gochiusa.team/temp/"),
+        params["imageUrl"].startswith("http://192.168.0.3:5000/static/temp/")
+    ]):
+        return jsonify(status='400', message='bad request: not valid url')
     #TODO:　画像重複確認
-    # タイトル重複確認(タイトルの重複は許可する)
-    existsIllusts = g.db.get(
-        "SELECT COUNT(illustID) FROM data_illust WHERE illustName LIKE ?",
-        ("%"+params["title"]+"%",)
-    )
-    if existsIllusts[0][0] > 0:
-        params["title"] += str(existsIllusts[0][0])
     #作者情報取得
     artistName = params["artist"].get("name", None)
     pixivID = params["artist"].get("pixivID", None)
@@ -124,26 +107,27 @@ def createArt():
         (artistName,pixivID,twitterID)
     )[0][0]
     #作品情報取得
-    illustName = params.get("title", "")
-    illustDescription = params.get("caption", "")
+    illustName = params.get("title", "無題")
+    illustDescription = params.get("caption", "コメントなし")
     illustDate = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    illustPage = params.get("pages", "1")
-    illustOriginUrl = params.get("originUrl", "")
-    illustOriginSite = params.get("originService", "独自")
+    #illustPage = params.get("pages", "1")
+    illustPage = 1
+    illustOriginUrl = params.get("originUrl", "https://gochiusa.com")
+    illustOriginSite = params.get("originService", "不明")
     illustNsfw = params.get("nsfw", "0")
-    illustNsfw = "1" if illustNsfw not in ["0","False","false"] else "0"
+    illustNsfw = "1" if illustNsfw not in [0,"0","False","false"] else "0"
     #データ登録
     resp = g.db.edit(
         "INSERT INTO data_illust (artistID,illustName,illustDescription,illustDate,illustPage,illustLike,illustOriginUrl,illustOriginSite,userID,illustNsfw) VALUES (?,?,?,?,?,?,?,?,?,?)",
         (
             str(artistID),
-            illustName,
-            illustDescription,
+            g.validate(illustName,lengthMax=50, escape=False),
+            g.validate(illustDescription,lengthMax=300),
             illustDate,
             illustPage,
             "0",
             illustOriginUrl,
-            illustOriginSite,
+            g.validate(illustOriginSite,lengthMax=20),
             str(g.userID),
             str(illustNsfw)
         ),
@@ -153,12 +137,12 @@ def createArt():
         g.db.rollback()
         return jsonify(status=500, message="Server bombed.")
     # 登録した画像のIDを取得
-    illustID = g.db.get("SELECT illustID FROM data_illust WHERE illustName=?", (illustName,) )[0][0]
+    illustID = g.db.get("SELECT illustID FROM data_illust WHERE illustName=? ORDER BY illustID DESC", (illustName,) )[0][0]
     #タグ情報取得/作成
     if "tag" in params.keys():
         for t in params["tag"]:
             if not g.db.has("info_tag","tagName=?", (t,)):
-                g.db.edit("INSERT INTO info_tag (tagName,tagType) VALUES (?,0)", (t,), False)
+                g.db.edit("INSERT INTO info_tag (userID,tagName,tagType,tagNsfw) VALUES (?,?,0,0)", (g.userID,t,), False)
             tagID = g.db.get("SELECT tagID FROM info_tag WHERE tagName=?",(t,))[0][0]
             resp = g.db.edit("INSERT INTO data_tag (illustID,tagID) VALUES (?,?)",(str(illustID),str(tagID)), False)
             if not resp:
@@ -174,35 +158,64 @@ def createArt():
             if not resp:
                 g.db.rollback()
                 return jsonify(status=500, message="Server bombed.")
-    #画像保存
-    #変換を試みる
-    fileDirs = [os.path.join(current_app.config['UPLOAD_FOLDER'], f) for f in ["orig","thumb","small","large"]]
-    fileExtensions = ["PNG","WEBP"]
-    with tempfile.TemporaryDirectory() as temp_path:
-        filePath = os.path.join(temp_path, f"{illustID}_orig.png")
-        file.save(filePath)
-        try:
-            origImg = Image.open(filePath)
-            thumbImg = createThumb(origImg)
-            smallImg = createSmall(origImg)
-            largeImg = createLarge(origImg)
-            files = [origImg, thumbImg, smallImg, largeImg]
-            for data,dir in zip(files,fileDirs):
-                for extension in fileExtensions:
-                    data.save(
-                        os.path.join(dir, f"{illustID}."+extension.lower()),
-                        extension
-                    )
-        except Exception as e:
-            for dir in fileDirs:
-                for extension in fileExtensions:
-                    filePath = os.path.join(dir, f"{illustID}."+extension.lower())
-                    if os.path.exists(filePath):
-                        os.remove(filePath)
-            g.db.rollback()
-            return jsonify(status=400, message="Your image is broken.")
-    recordApiRequest(g.userID, "addArt", param1=illustID)
+    #画像の保存先フォルダ
+    fileDirs = [
+        os.path.join(current_app.config['ILLUST_FOLDER'], f)
+        for f in ["orig","thumb","small","large"]
+    ]
+    try:
+        with TemporaryDirectory() as tempFolder:
+            fileOrigPath = os.path.join(tempFolder, f"{illustID}.raw")
+            # 何枚目の画像を保存するかはURLパラメータで見る
+            page = 0
+            if "?" in params["imageUrl"]\
+            and "192.168.0.3" not in params["imageUrl"]\
+            and "cdn.gochiusa.team" not in params["imageUrl"]:
+                query = parse_query(params["imageUrl"][params["imageUrl"].find("?")+1:])
+                page = int(query["page"]) - 1
+            # ツイッターから取る場合
+            if params["imageUrl"].startswith("https://twitter.com/"):
+                tg = TweetGetter()
+                imgs = tg.getTweet(params["imageUrl"])['illust']['imgs']
+                img_addr = imgs[page]["large_src"]
+                tg.downloadIllust(img_addr, fileOrigPath)
+            # Pixivから取る場合
+            elif params["imageUrl"].startswith("https://www.pixiv.net/"):
+                ig = IllustGetter()
+                imgs = ig.getIllust(params["imageUrl"])['illust']['imgs']
+                img_addr = imgs[page]["large_src"]
+                ig.downloadIllust(img_addr, fileOrigPath)
+            # ローカルから取る場合
+            else:
+                shutil.move(params["imageUrl"][params["imageUrl"].find("/static/temp/")+1:] ,fileOrigPath)
+            origImg = createOrig(fileOrigPath)
+            files = [
+                origImg,
+                createThumb(origImg),
+                createSmall(origImg),
+                createLarge(origImg)
+            ]
+        for data,dir in zip(files,fileDirs):
+                data.save(
+                    os.path.join(dir, f"{illustID}.png"),
+                    compress_level=0
+                )
+                data.save(
+                    os.path.join(dir, f"{illustID}.webp"),
+                    lossless=True,
+                    quality=90
+                )
+    except Exception as e:
+        traceback.print_exc()
+        for dir in fileDirs:
+            for extension in ["PNG","WEBP"]:
+                filePath = os.path.join(dir, f"{illustID}."+extension.lower())
+                if os.path.exists(filePath):
+                    os.remove(filePath)
+        g.db.rollback()
+        return jsonify(status=400, message="bad request")
     g.db.commit()
+    recordApiRequest(g.userID, "addArt", param1=illustID)
     return jsonify(status=201, message="Created", illustID=illustID)
 
 @arts_api.route('/<int:illustID>',methods=["DELETE"], strict_slashes=False)
