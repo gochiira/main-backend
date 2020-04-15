@@ -66,7 +66,7 @@ def createArt():
         "nsfw"
     ]
     #必須パラメータ確認
-    print(params.items())
+    #print(params.items())
     params = {p:params[p] for p in params.keys() if p in validParams}
     if not requiredParams.issubset(params.keys()):
         return jsonify(status='400', message='bad request: not enough')
