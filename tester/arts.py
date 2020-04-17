@@ -2,6 +2,7 @@ from base import BaseClient
 import json
 cl = BaseClient()
 
+'''
 addEndpoint = "/arts"
 params = {
     "title":"ゆっくりチノちゃん",
@@ -18,12 +19,13 @@ params = {
 resp = cl.post(addEndpoint, json=params).json()
 print(resp)
 illustID = resp["illustID"]
-
 '''
+
 # getArt
-getEndpoint = f"/arts/{illustID}"
+getEndpoint = "/arts/1"
 print(cl.get(getEndpoint).text)
 
+'''
 # editArt
 putEndpoint = f"/arts/{illustID}"
 params = {"illustDescription":"TestDescription"}

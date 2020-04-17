@@ -70,7 +70,8 @@ def getArtByPixiv():
 @scrape_api.route('/self',methods=["POST"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def addArtBySelf():
+def getArtBySelf():
+    # これだけアップロードか何か、エンドポイント変えたほうがいいような気がする...
     if "file" not in request.files:
         return jsonify(status=400, message="File must be included")
     file = request.files['file']
