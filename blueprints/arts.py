@@ -278,9 +278,10 @@ def getArt(illustID):
         "originUrl": artData[8],
         "originService": artData[9],
         "nsfw": artData[10],
+        "hash": artData[13],
         "artist": {
             "id": artData[2],
-            "name": artData[13],
+            "name": artData[14],
             "group": artData[15],
             "pixiv": artData[16],
             "twitter": artData[17],
