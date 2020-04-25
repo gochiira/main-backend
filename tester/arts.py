@@ -2,28 +2,26 @@ from base import BaseClient
 import json
 cl = BaseClient()
 
-'''
 addEndpoint = "/arts"
 params = {
-    "title":"ゆっくりチノちゃん",
-    "originService":"描いた",
-    "originUrl": "https://mobile.twitter.com/deep_omado",
-    "imageUrl":"http://192.168.0.3:5000/static/temp/ZjE5NjU5ODc3M2NlNGQ5NWJmNTRjMWJkYWRhMTYwZmQ.raw",
+    "title":"美味しい顔のチノちゃん！",
+    "originService":"Twitter",
+    "originUrl": "https://twitter.com/mozukun43/status/1252950803930742791",
+    "imageUrl":"https://twitter.com/mozukun43/status/1252950803930742791",
     "artist":{
-        "name":"お窓"
+        "name":"もくず"
     },
-    "tag": ["デジタル", "素人", "アイコン", "Twitterアイコン", "フリー素材", "黒歴史"],
-    "chara":["香風智乃"],
+    "tag": ["ランチ"],
+    "chara":["香風智乃"]
 }
 # addArt
 resp = cl.post(addEndpoint, json=params).json()
 print(resp)
-illustID = resp["illustID"]
-'''
+
 
 # getArt
-getEndpoint = "/arts/1"
-print(cl.get(getEndpoint).text)
+#getEndpoint = "/arts/1"
+#print(cl.get(getEndpoint).text)
 
 '''
 # editArt

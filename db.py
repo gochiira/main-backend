@@ -47,7 +47,7 @@ class SQLHandler(object):
 
 class SQLHandler(object):
     def __init__(self,
-        file_name="gcir_dev_db",
+        file_name="gcir_core_db",
         host="192.168.0.10",
         port="3306",
         user="gcir_api_admin",
