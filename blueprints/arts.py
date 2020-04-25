@@ -2,10 +2,10 @@ from flask import Blueprint, g, request, jsonify, escape, current_app
 from .authorizator import auth,token_serializer
 from .limiter import apiLimiter,handleApiPermission
 from .recorder import recordApiRequest
-from .lib.convertImages import *
-from .lib.pixiv_client import IllustGetter
-from .lib.twitter_client import TweetGetter
+from .worker.convert_worker import processConvertRequest
 from datetime import datetime
+from redis import Redis
+from rq import Queue
 import os
 import tempfile
 import json
@@ -85,159 +85,20 @@ def createArt():
         params["imageUrl"].startswith("http://192.168.0.3:5000/static/temp/")
     ]):
         return jsonify(status='400', message='bad request: not valid url')
-    #作者情報取得
-    artistName = params["artist"].get("name", None)
-    pixivID = params["artist"].get("pixivID", None)
-    twitterID = params["artist"].get("twitterID", None)
-    #既存の作者でなければ新規作成
-    if not g.db.has(
-        "info_artist",
-        "artistName=%s OR pixivID=%s OR twitterID=%s",
-        (artistName,pixivID,twitterID)
-    ):
-        resp = g.db.edit(
-            "INSERT INTO info_artist (artistName,twitterID,pixivID) VALUES (%s,%s,%s)",
-            (artistName,pixivID,twitterID),
-            False
-        )
-        if not resp:
-            return jsonify(status=500, message="Server bombed.")
-    #作者IDを取得する
-    artistID = g.db.get(
-        "SELECT artistID FROM info_artist WHERE artistName=%s OR pixivID=%s or twitterID=%s",
-        (artistName,pixivID,twitterID)
-    )[0][0]
-    #作品情報取得
-    illustName = params.get("title", "無題")
-    illustDescription = params.get("caption", "コメントなし")
-    illustDate = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    #illustPage = params.get("pages", "1")
-    illustPage = 1
-    illustOriginUrl = params.get("originUrl", "https://gochiusa.com")
-    illustOriginSite = params.get("originService", "不明")
-    illustNsfw = params.get("nsfw", "0")
-    illustNsfw = "1" if illustNsfw not in [0,"0","False","false"] else "0"
-    #重複確認
-    resp = g.db.get(
-        "SELECT illustID FROM data_illust WHERE illustOriginUrl=%s AND illustOriginUrl <> 'https://gochiusa.com'",
-        (illustOriginUrl,)
+    # バリデーションする
+    params["title"] = g.validate(params.get("title", "無題"),lengthMax=50, escape=False)
+    params["caption"] = g.validate(params.get("caption", "コメントなし"),lengthMax=300)
+    params["originService"] = g.validate(params.get("originService", "不明"),lengthMax=20)
+    params["userID"] = g.userID
+    # Workerにパラメータを投げる
+    q = Queue(
+        connection=Redis(host="192.168.0.10",port=6379, db=0),
+        job_timeout=120,
+        description=f'sUploadedImageConverter (Issued by User{g.userID})'
     )
-    if resp:
-        return jsonify(status=409, message="Specified image is already exist")
-    #データ登録
-    resp = g.db.edit(
-        "INSERT INTO data_illust (artistID,illustName,illustDescription,illustDate,illustPage,illustLike,illustOriginUrl,illustOriginSite,userID,illustNsfw) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
-        (
-            str(artistID),
-            g.validate(illustName,lengthMax=50, escape=False),
-            g.validate(illustDescription,lengthMax=300),
-            illustDate,
-            illustPage,
-            "0",
-            illustOriginUrl,
-            g.validate(illustOriginSite,lengthMax=20),
-            str(g.userID),
-            str(illustNsfw)
-        ),
-        False
-    )
-    if not resp:
-        g.db.rollback()
-        return jsonify(status=500, message="Server bombed.")
-    # 登録した画像のIDを取得
-    illustID = g.db.get("SELECT illustID FROM data_illust WHERE illustName=%s ORDER BY illustID DESC", (illustName,) )[0][0]
-    #タグ情報取得/作成
-    if "tag" in params.keys():
-        for t in params["tag"]:
-            if not g.db.has("info_tag","tagName=%s", (t,)):
-                g.db.edit("INSERT INTO info_tag (userID,tagName,tagType,tagNsfw) VALUES (%s,%s,0,0)", (g.userID,t,), False)
-            tagID = g.db.get("SELECT tagID FROM info_tag WHERE tagName=%s",(t,))[0][0]
-            resp = g.db.edit("INSERT INTO data_tag (illustID,tagID) VALUES (%s,%s)",(str(illustID),str(tagID)), False)
-            if not resp:
-                g.db.rollback()
-                return jsonify(status=500, message="Server bombed.")
-    #キャラ情報取得/作成
-    if "chara" in params.keys():
-        for t in params["chara"]:
-            if not g.db.has("info_tag","tagName=%s", (t,)):
-                g.db.edit("INSERT INTO info_tag (tagName,tagType) VALUES (%s,1)", (t,), False)
-            tagID = g.db.get("SELECT tagID FROM info_tag WHERE tagName=%s",(t,))[0][0]
-            resp = g.db.edit("INSERT INTO data_tag (illustID,tagID) VALUES (%s,%s)",(str(illustID),str(tagID)), False)
-            if not resp:
-                g.db.rollback()
-                return jsonify(status=500, message="Server bombed.")
-    #画像の保存先フォルダ
-    fileDirs = [
-        os.path.join(current_app.config['ILLUST_FOLDER'], f)
-        for f in ["orig","thumb","small","large"]
-    ]
-    isConflict = False
-    try:
-        with TemporaryDirectory() as tempFolder:
-            fileOrigPath = os.path.join(tempFolder, f"{illustID}.raw")
-            # 何枚目の画像を保存するかはURLパラメータで見る
-            page = 0
-            if "?" in params["imageUrl"]\
-            and "192.168.0.3" not in params["imageUrl"]\
-            and "cdn.gochiusa.team" not in params["imageUrl"]:
-                query = parse_query(params["imageUrl"][params["imageUrl"].find("?")+1:])
-                page = int(query["page"][0]) - 1
-            # ツイッターから取る場合
-            if params["imageUrl"].startswith("https://twitter.com/"):
-                tg = TweetGetter()
-                imgs = tg.getTweet(params["imageUrl"])['illust']['imgs']
-                img_addr = imgs[page]["large_src"]
-                tg.downloadIllust(img_addr, fileOrigPath)
-            # Pixivから取る場合
-            elif params["imageUrl"].startswith("https://www.pixiv.net/"):
-                ig = IllustGetter()
-                imgs = ig.getIllust(params["imageUrl"])['illust']['imgs']
-                img_addr = imgs[page]["large_src"]
-                ig.downloadIllust(img_addr, fileOrigPath)
-            # ローカルから取る場合
-            else:
-                shutil.move(params["imageUrl"][params["imageUrl"].find("/static/temp/")+1:] ,fileOrigPath)
-            # ハッシュ値比較
-            hash = int(str(imagehash.phash(Image.open(fileOrigPath))), 16)
-            is_match = g.db.get(
-                "SELECT illustID, illustName, data_illust.artistID, artistName, BIT_COUNT(illustHash ^ %s) AS SAME FROM `data_illust` INNER JOIN info_artist ON info_artist.artistID = data_illust.artistID HAVING SAME = 0",
-                (hash,)
-            )
-            if is_match:
-                isConflict = True
-                Exception('Conflict')
-            origImg = createOrig(fileOrigPath)
-            files = [
-                origImg,
-                createThumb(origImg),
-                createSmall(origImg),
-                createLarge(origImg)
-            ]
-        for data,dir in zip(files,fileDirs):
-                data.save(
-                    os.path.join(dir, f"{illustID}.png"),
-                    compress_level=0
-                )
-                data.save(
-                    os.path.join(dir, f"{illustID}.webp"),
-                    lossless=True,
-                    quality=90
-                )
-    except Exception as e:
-        traceback.print_exc()
-        for dir in fileDirs:
-            for extension in ["PNG","WEBP"]:
-                filePath = os.path.join(dir, f"{illustID}."+extension.lower())
-                if os.path.exists(filePath):
-                    os.remove(filePath)
-        g.db.rollback()
-        if isConflict:
-            return jsonify(status=409, message="Specified image is already exist")
-        else:
-            return jsonify(status=400, message="bad request")
-    g.db.commit()
-    recordApiRequest(g.userID, "addArt", param1=illustID)
-    return jsonify(status=201, message="Created", illustID=illustID)
+    q.enqueue(processConvertRequest, params)
+    recordApiRequest(g.userID, "addArt", param1=-1)
+    return jsonify(status=202, message="Accepted")
 
 @arts_api.route('/<int:illustID>',methods=["DELETE"], strict_slashes=False)
 @auth.login_required
