@@ -277,6 +277,7 @@ def getArt(illustID):
         "like": artData[7],
         "originUrl": artData[8],
         "originService": artData[9],
+        "extension": "png",
         "nsfw": artData[10],
         "hash": artData[13],
         "artist": {
