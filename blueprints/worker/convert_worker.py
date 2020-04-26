@@ -131,10 +131,10 @@ class UploadLogger():
         self.conn.commit()
         return True
 
-    def logCompleted(self):
+    def logCompleted(self, illustID):
         resp = self.conn.edit(
-            "UPDATE data_upload SET uploadStatus = 5, uploadFinishedDate = NOW() WHERE uploadID = %s",
-            (self.uploadID,),
+            "UPDATE data_upload SET uploadStatus = 5, uploadFinishedDate = NOW(), illustID=%s WHERE uploadID = %s",
+            (self.uploadID, illustID),
             False
         )
         if not resp:
@@ -322,7 +322,7 @@ def processConvertRequest(params):
             uploadLogger.logServerExplodedError()
         return
     conn.commit()
-    uploadLogger.logCompleted()
+    uploadLogger.logCompleted(illustID)
     return
 
 if __name__ == "__main__":

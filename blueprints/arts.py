@@ -11,11 +11,6 @@ import tempfile
 import json
 import shutil
 import traceback
-import imagehash
-from PIL import Image
-from tempfile import TemporaryDirectory
-from imghdr import what as what_img
-from urllib.parse import parse_qs as parse_query
 
 arts_api = Blueprint('arts_api', __name__)
 
@@ -112,7 +107,34 @@ def destroyArt(illustID):
 @apiLimiter.limit(handleApiPermission)
 def getArt(illustID):
     artData = g.db.get(
-        "SELECT * FROM data_illust INNER JOIN info_artist ON data_illust.artistID = info_artist.artistID WHERE illustID = %s",
+        """SELECT
+            data_illust.illustID,
+            illustName,
+            illustDescription,
+            illustDate,
+            illustPage,
+            illustLike,
+            illustOriginUrl,
+            illustOriginSite,
+            illustNsfw,
+            illustHash,
+            illustExtension,
+            data_illust.artistID,
+            artistName,
+            data_illust.userID,
+            userName
+        FROM
+            data_illust
+        INNER JOIN
+            info_artist
+        ON
+            data_illust.artistID = info_artist.artistID
+        INNER JOIN
+            data_user
+        ON
+            data_illust.userID = data_user.userID
+        WHERE
+            illustID = %s""",
         (illustID,)
     )
     if not len(artData):
@@ -130,23 +152,23 @@ def getArt(illustID):
     )
     return jsonify(status=200, data={
         "illustID": artData[0],
-        "userID": artData[1],
-        "title": artData[3],
-        "caption": artData[4],
-        "date": artData[5],
-        "pages": artData[6],
-        "like": artData[7],
-        "originUrl": artData[8],
-        "originService": artData[9],
-        "extension": "png",
-        "nsfw": artData[10],
-        "hash": artData[13],
+        "title": artData[1],
+        "caption": artData[2],
+        "date": artData[3].strftime('%Y-%m-%d %H:%M:%S'),
+        "pages": artData[4],
+        "like": artData[5],
+        "originUrl": artData[6],
+        "originService": artData[7],
+        "nsfw": artData[8],
+        "hash": artData[9],
+        "extension": artData[10],
         "artist": {
-            "id": artData[2],
-            "name": artData[14],
-            "group": artData[15],
-            "pixiv": artData[16],
-            "twitter": artData[17],
+            "id": artData[11],
+            "name": artData[12]
+        },
+        "user": {
+            "id": artData[13],
+            "name": artData[14]
         },
         "tag": [[t[0],t[1],t[2]] for t in tagData],
         "chara": [[c[0],c[1]] for c in charaData]
