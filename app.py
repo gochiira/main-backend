@@ -121,4 +121,5 @@ def createApp():
 app = createApp()
 
 if __name__ == '__main__':
-    app.run(host="192.168.0.3",debug=True)
+    app.debug = True
+    app.run(host="192.168.0.3")
