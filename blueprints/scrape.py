@@ -1,7 +1,7 @@
 from flask import Blueprint, g, request, jsonify, escape, current_app
 from flask_httpauth import HTTPTokenAuth
-from .authorizator import auth,token_serializer
-from .limiter import apiLimiter,handleApiPermission
+from .authorizator import auth, token_serializer
+from .limiter import apiLimiter, handleApiPermission
 from .recorder import recordApiRequest
 from .lib.pixiv_client import IllustGetter
 from .lib.twitter_client import TweetGetter
@@ -17,17 +17,20 @@ from imghdr import what as what_img
 CDN_ADDRESS = "http://192.168.0.3:5000/static/temp/"
 ALLOWED_EXTENSIONS = ["gif", "png", "jpg", "jpeg", "webp"]
 
+
 def isNotAllowedFile(filename):
     if filename == ""\
-    or '.' not in filename\
-    or (filename.rsplit('.', 1)[1].lower()\
-    not in ALLOWED_EXTENSIONS):
+        or '.' not in filename\
+        or (filename.rsplit('.', 1)[1].lower()
+            not in ALLOWED_EXTENSIONS):
         return True
     return False
 
+
 scrape_api = Blueprint('scrape_api', __name__)
 
-@scrape_api.route('/twitter',methods=["POST"], strict_slashes=False)
+
+@scrape_api.route('/twitter', methods=["POST"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
 def getArtByTwitter():
@@ -41,9 +44,9 @@ def getArtByTwitter():
     if resp == {}:
         return jsonify(status='400', message='bad request')
     return jsonify(status='200', message='ok', data=resp)
-        
-    
-@scrape_api.route('/pixiv',methods=["POST"], strict_slashes=False)
+
+
+@scrape_api.route('/pixiv', methods=["POST"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
 def getArtByPixiv():
@@ -56,7 +59,7 @@ def getArtByPixiv():
     resp = ig.getIllust(params['url'])
     if resp == {}:
         return jsonify(status='400', message='bad request')
-    for i,img in enumerate(resp["illust"]["imgs"]):
+    for i, img in enumerate(resp["illust"]["imgs"]):
         filename = os.path.basename(img['thumb_src'])
         if not os.path.isfile('static/temp/'+filename):
             filePath = os.path.join(
@@ -67,7 +70,8 @@ def getArtByPixiv():
         resp["illust"]["imgs"][i]['thumb_src'] = CDN_ADDRESS + filename
     return jsonify(status='200', message='ok', data=resp)
 
-@scrape_api.route('/self',methods=["POST"], strict_slashes=False)
+
+@scrape_api.route('/self', methods=["POST"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
 def getArtBySelf():
@@ -80,7 +84,7 @@ def getArtBySelf():
         return jsonify(status=400, message="The file is not allowed")
     with TemporaryDirectory() as temp_path:
         # 画像を一旦保存して確認
-        uniqueID = str(uuid4()).replace("-","")
+        uniqueID = str(uuid4()).replace("-", "")
         uniqueID = b64encode(uniqueID.encode("utf8")).decode("utf8")[:-1]
         tempPath = os.path.join(temp_path, uniqueID)
         file.save(tempPath)
@@ -101,7 +105,8 @@ def getArtBySelf():
         }
     )
 
-@scrape_api.route('/predict_tag',methods=["GET"], strict_slashes=False)
+
+@scrape_api.route('/predict_tag', methods=["GET"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
 def predictTag():
