@@ -14,7 +14,7 @@ import os.path
 import shutil
 from imghdr import what as what_img
 
-CDN_ADDRESS = "http://192.168.0.3:5000/static/temp/"
+CDN_ADDRESS = "https://api.gochiusa.team/static/temp/"
 ALLOWED_EXTENSIONS = ["gif", "png", "jpg", "jpeg", "webp"]
 
 
@@ -40,6 +40,9 @@ def getArtByTwitter():
     if 'url' not in params.keys():
         return jsonify(status='400', message='bad request')
     tg = TweetGetter()
+    # 雑なエラー対応
+    params['url'] = params['url'][:params["url"].find('?')]
+    params['url'] = params['url'].replace("mobile.", "")
     resp = tg.getTweet(params['url'])
     if resp == {}:
         return jsonify(status='400', message='bad request')
@@ -56,6 +59,8 @@ def getArtByPixiv():
     if 'url' not in params.keys():
         return jsonify(status='400', message='bad request')
     ig = IllustGetter()
+    # 雑なエラー対応
+    params['url'] = params['url'][:params["url"].find('?')]
     resp = ig.getIllust(params['url'])
     if resp == {}:
         return jsonify(status='400', message='bad request')
