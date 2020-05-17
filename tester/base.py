@@ -9,15 +9,16 @@ eyJhbGciOiJIUzI1NiJ9.eyJpZCI6MSwic2VxIjoyLCJwZXJtaXNzaW9uIjo1fQ.5_UXRraCZuqOPs5X
 
 '''
 
+
 class BaseClient():
-    def __init__(self,address="http://192.168.0.3:5000",token="eyJhbGciOiJIUzI1NiJ9.eyJpZCI6Miwic2VxIjoxLCJwZXJtaXNzaW9uIjo5fQ.tLS3QO91IWv80TyH_KZTHo6wMSG2csAN0jQFWk4Zo2U"):
+    def __init__(self, address="http://localhost:5000", token="eyJhbGciOiJIUzI1NiJ9.eyJpZCI6Miwic2VxIjoxLCJwZXJtaXNzaW9uIjo5fQ.tLS3QO91IWv80TyH_KZTHo6wMSG2csAN0jQFWk4Zo2U"):
         self.address = address
         self.headers = {
-            "Authorization": "Bearer "+ token,
+            "Authorization": "Bearer " + token,
             "ContentType": "application/json"
         }
-        
-    def post(self, endpoint,params=None, data=None, json=None, files=None):
+
+    def post(self, endpoint, params=None, data=None, json=None, files=None):
         return requests.post(
             self.address + endpoint,
             params=params,
@@ -25,8 +26,8 @@ class BaseClient():
             headers=self.headers,
             files=files
         )
-        
-    def get(self, endpoint,params=None,data=None,json=None, files=None):
+
+    def get(self, endpoint, params=None, data=None, json=None, files=None):
         return requests.get(
             self.address + endpoint,
             params=params,
@@ -34,8 +35,8 @@ class BaseClient():
             json=json,
             headers=self.headers
         )
-        
-    def put(self, endpoint,params=None,data=None,json=None, files=None):
+
+    def put(self, endpoint, params=None, data=None, json=None, files=None):
         return requests.put(
             self.address + endpoint,
             params=params,
@@ -43,8 +44,8 @@ class BaseClient():
             json=json,
             headers=self.headers
         )
-        
-    def delete(self, endpoint,params=None,data=None,json=None, files=None):
+
+    def delete(self, endpoint, params=None, data=None, json=None, files=None):
         return requests.delete(
             self.address + endpoint,
             params=params,
