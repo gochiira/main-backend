@@ -41,8 +41,10 @@ def getArtByTwitter():
         return jsonify(status='400', message='bad request')
     tg = TweetGetter()
     # 雑なエラー対応
-    params['url'] = params['url'][:params["url"].find('?')]
+    if params['url'].find("?") != -1:
+        params['url'] = params['url'][:params['url'].find("?")]
     params['url'] = params['url'].replace("mobile.", "")
+    print(params['url'])
     resp = tg.getTweet(params['url'])
     if resp == {}:
         return jsonify(status='400', message='bad request')
@@ -60,7 +62,8 @@ def getArtByPixiv():
         return jsonify(status='400', message='bad request')
     ig = IllustGetter()
     # 雑なエラー対応
-    params['url'] = params['url'][:params["url"].find('?')]
+    if params['url'].find("?") != -1:
+        params['url'] = params['url'][:params["url"].find('?')]
     resp = ig.getIllust(params['url'])
     if resp == {}:
         return jsonify(status='400', message='bad request')

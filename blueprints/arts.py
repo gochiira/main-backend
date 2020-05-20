@@ -192,9 +192,11 @@ def editArt(illustID):
         "DELETE FROM data_tag WHERE illustID = %s",
         (illustID,)
     )
+    # タグとキャラの追加
     for i, k in enumerate(["tag", "chara"]):
         if k in params.keys():
             for t in params[k]:
+                # 存在しないタグは作成
                 if not g.db.has("info_tag", "tagName=%s", (t,)):
                     g.db.edit(
                         "INSERT INTO info_tag (userID,tagName,tagType,tagNsfw) VALUES (%s,%s,%s,0)",
@@ -205,10 +207,12 @@ def editArt(illustID):
                     "SELECT tagID FROM info_tag WHERE tagName=%s",
                     (t,)
                 )[0][0]
+                # タグIDのデータ挿入
                 resp = g.db.edit(
                     f"INSERT INTO data_tag (illustID,tagID) VALUES ({illustID},{tagID})",
                     autoCommit=False
                 )
+                # 爆発したら 死亡を返す
                 if not resp:
                     return jsonify(status=500, message="Server bombed.")
     # 作者名の編集
