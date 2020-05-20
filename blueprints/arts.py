@@ -187,18 +187,45 @@ def editArt(illustID):
     params = request.get_json()
     if not params:
         return jsonify(status=400, message="Request parameters are not satisfied.")
-    validParams = [
-        "artistID",
-        "illustName",
-        "illustDescription",
-        "illustDate",
-        "illustPage",
-        "illustLike",
-        "illustOriginUrl",
-        "illustOriginSite",
-        "userID"
-    ]
-    params = {p: params[p] for p in params.keys() if p in validParams}
+    # まず一旦タグを全部破壊
+    resp = g.db.edit(
+        "DELETE FROM data_tag WHERE illustID = %s",
+        (illustID,)
+    )
+    for i, k in enumerate(["tag", "chara"]):
+        if k in params.keys():
+            for t in params[k]:
+                if not g.db.has("info_tag", "tagName=%s", (t,)):
+                    g.db.edit(
+                        "INSERT INTO info_tag (userID,tagName,tagType,tagNsfw) VALUES (%s,%s,%s,0)",
+                        (g.userID, t, i),
+                        False
+                    )
+                tagID = g.db.get(
+                    "SELECT tagID FROM info_tag WHERE tagName=%s",
+                    (t,)
+                )[0][0]
+                resp = g.db.edit(
+                    f"INSERT INTO data_tag (illustID,tagID) VALUES ({illustID},{tagID})",
+                    autoCommit=False
+                )
+                if not resp:
+                    return jsonify(status=500, message="Server bombed.")
+    # 作者名の編集
+    if "artist" in params.keys():
+        pass
+    validParams = {
+        "artistId": "artistID",
+        "title": "illustName",
+        "caption": "illustDescription",
+        "date": "illustDate",
+        "page": "illustPage",
+        "originUrl": "illustOriginUrl",
+        "originService": "illustOriginSite",
+        "illustLikeCount": "illustLike",
+        "illustOwnerId": "userID"
+    }
+    params = {validParams[p]: params[p] for p in params.keys() if p in validParams.keys()}
     if not params:
         return jsonify(status=400, message="Request parameters are not satisfied.")
     if "artistID" in params.keys():
@@ -207,11 +234,13 @@ def editArt(illustID):
             return jsonify(status=400, message="Specified artist was not found.")
     for p in params.keys():
         resp = g.db.edit(
-            "UPDATE `data_illust` SET `%s`=%s WHERE illustID=%s" % (p),
-            (params[p], illustID,)
+            f"UPDATE data_illust SET {p}=%s WHERE illustID=%s",
+            (params[p], illustID,),
+            False
         )
         if not resp:
             return jsonify(status=500, message="Server bombed.")
+    g.db.commit()
     return jsonify(status=200, message="Update succeed.")
 
 #
@@ -396,3 +425,38 @@ def addArtLike(illustID):
         (illustID,)
     )
     return jsonify(status=200, message="Update succeed.", likes=resp2[0][0])
+
+
+@arts_api.route('/<int:illustID>/favorites', methods=["PUT"], strict_slashes=False)
+@auth.login_required
+@apiLimiter.limit(handleApiPermission)
+def toggleArtBookmark(illustID):
+    isExist = g.db.get(
+        "SELECT favoriteID FROM data_favorite"
+    )
+    mylistId = request.args.get("mylistID", default=0, type=int)
+    # WebUIの設定で常時マイリスト1に突っ込むとかあってもいいかも
+    # じゃないとtoggleできない
+    if not isExist:
+        # 存在しなければ追加
+        '''
+        resp = g.db.edit(
+            "UPDATE data_illust SET illustLike = illustLike + 1 WHERE illustID = %s",
+            (illustID,)
+        )
+        '''
+        print('Exists')
+    else:
+        # 存在すれば削除
+        '''
+        resp = g.db.get(
+            "SELECT illustLike FROM data_illust WHERE illustID = %s",
+            (illustID,)
+        )
+        '''
+        print('notExists')
+    '''
+    if not resp:
+        return jsonify(status=500, message="Server bombed.")
+    '''
+    return jsonify(status=501, message="Not implemented")
