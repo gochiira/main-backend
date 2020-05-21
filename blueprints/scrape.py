@@ -5,8 +5,6 @@ from .limiter import apiLimiter, handleApiPermission
 from .recorder import recordApiRequest
 from .lib.pixiv_client import IllustGetter
 from .lib.twitter_client import TweetGetter
-from .lib.convertImages import *
-# from werkzeug.utils import secure_filename
 from tempfile import TemporaryDirectory
 from base64 import b64encode
 from uuid import uuid4
@@ -39,7 +37,7 @@ def getArtByTwitter():
         return jsonify(status='400', message='bad request')
     if 'url' not in params.keys():
         return jsonify(status='400', message='bad request')
-    tg = TweetGetter()
+    tg = TweetGetter('blueprints/lib/twitter_auth.json')
     # 雑なエラー対応
     if params['url'].find("?") != -1:
         params['url'] = params['url'][:params['url'].find("?")]
@@ -60,7 +58,7 @@ def getArtByPixiv():
         return jsonify(status='400', message='bad request')
     if 'url' not in params.keys():
         return jsonify(status='400', message='bad request')
-    ig = IllustGetter()
+    ig = IllustGetter('blueprints/lib/pixiv_auth.json')
     # 雑なエラー対応
     if params['url'].find("?") != -1:
         params['url'] = params['url'][:params["url"].find('?')]
@@ -68,14 +66,11 @@ def getArtByPixiv():
     if resp == {}:
         return jsonify(status='400', message='bad request')
     for i, img in enumerate(resp["illust"]["imgs"]):
-        filename = os.path.basename(img['thumb_src'])
-        if not os.path.isfile('static/temp/'+filename):
-            filePath = os.path.join(
-                current_app.config['TEMP_FOLDER'],
-                filename
-            )
-            ig.downloadIllust(img['thumb_src'], filePath)
-        resp["illust"]["imgs"][i]['thumb_src'] = CDN_ADDRESS + filename
+        fileName = os.path.basename(img['thumb_src'])
+        if not os.path.isfile('static/temp/'+fileName):
+            filePath = current_app.config['TEMP_FOLDER']
+            ig.downloadIllust(img['thumb_src'], name=fileName, path=filePath)
+        resp["illust"]["imgs"][i]['thumb_src'] = CDN_ADDRESS + fileName
     return jsonify(status='200', message='ok', data=resp)
 
 
