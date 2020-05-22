@@ -2,7 +2,7 @@ from flask import Blueprint, g, request, jsonify, escape, current_app
 from .authorizator import auth, token_serializer
 from .limiter import apiLimiter, handleApiPermission
 from .recorder import recordApiRequest
-from .worker.convert_worker import processConvertRequest
+from .worker import processConvertRequest
 from datetime import datetime
 from redis import Redis
 from rq import Queue
