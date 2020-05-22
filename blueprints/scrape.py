@@ -69,7 +69,8 @@ def getArtByPixiv():
         fileName = os.path.basename(img['thumb_src'])
         if not os.path.isfile('static/temp/'+fileName):
             filePath = current_app.config['TEMP_FOLDER']
-            ig.downloadIllust(img['thumb_src'], name=fileName, path=filePath)
+            path = os.path.join(filePath, fileName)
+            ig.downloadIllust(img['thumb_src'], path=path)
         resp["illust"]["imgs"][i]['thumb_src'] = CDN_ADDRESS + fileName
     return jsonify(status='200', message='ok', data=resp)
 
