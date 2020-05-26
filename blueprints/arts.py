@@ -214,10 +214,38 @@ def editArt(illustID):
                 )
                 # 爆発したら 死亡を返す
                 if not resp:
+                    g.db.rollback()
                     return jsonify(status=500, message="Server bombed.")
     # 作者名の編集
     if "artist" in params.keys():
-        pass
+        # 同じ名前があるなら既存の作者のIDに変更する
+        if g.db.has("info_artist", "artistName=%s", (params["artist"]["name"],)):
+            artistID = g.db.get(
+                "SELECT artistID FROM info_artist WHERE artistName=%s",
+                (params["artist"]["name"],)
+            )[0][0]
+            resp = g.db.edit(
+                "UPDATE data_illust SET artistID = %s WHERE illustID=%s",
+                (artistID, illustID),
+                autoCommit=False
+            )
+            # 古い方の作者IDはとりあえず放置しておく(GCで消し去る?)
+            if not resp:
+                g.db.rollback()
+                return jsonify(status=500, message="Server bombed.")
+        # そうでなければ今の作者の名前を変更する
+        else:
+            artistID = g.db.get(
+                "SELECT artistID FROM data_illust WHERE illustID=%s",
+                (illustID,)
+            )[0][0]
+            resp = g.db.edit(
+                "UPDATE info_artist SET artistName = %s WHERE artistID=%s",
+                (params["artist"]["name"], artistID)
+            )
+            if not resp:
+                g.db.rollback()
+                return jsonify(status=500, message="Server bombed.")
     validParams = {
         "artistId": "artistID",
         "title": "illustName",
@@ -227,7 +255,8 @@ def editArt(illustID):
         "originUrl": "illustOriginUrl",
         "originService": "illustOriginSite",
         "illustLikeCount": "illustLike",
-        "illustOwnerId": "userID"
+        "illustOwnerId": "userID",
+        "nsfw": "illustNsfw"
     }
     params = {validParams[p]: params[p] for p in params.keys() if p in validParams.keys()}
     if not params:
@@ -243,6 +272,7 @@ def editArt(illustID):
             False
         )
         if not resp:
+            g.db.rollback()
             return jsonify(status=500, message="Server bombed.")
     g.db.commit()
     return jsonify(status=200, message="Update succeed.")
