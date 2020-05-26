@@ -3,6 +3,7 @@ from tempfile import TemporaryDirectory
 from urllib.parse import parse_qs as parse_query
 from .lib.pixiv_client import IllustGetter
 from .lib.twitter_client import TweetGetter
+from .lib.notify_client import NotifyClient
 from .db import SQLHandler
 from imghdr import what as what_img
 from PIL import Image
@@ -136,10 +137,8 @@ class UploadLogger():
     def logCompleted(self, illustID):
         self.conn.edit(
             "UPDATE data_upload SET uploadStatus = 5, uploadFinishedDate = NOW(), illustID=%s WHERE uploadID = %s",
-            (self.uploadID, illustID),
-            False
+            (self.uploadID, illustID)
         )
-        self.conn.commit()
         return True
 
     def logDuplicatedImageError(self):
@@ -305,10 +304,20 @@ def processConvertRequest(params):
             shutil.move(fileOrigPath, os.path.join(
                 fileDir, "orig", f"{illustID}.{origType}"))
             converts = {
-                "thumb": [uploadConverter.createThumb, uploadLogger.logConvertedThumb],
-                "small": [uploadConverter.createSmall, uploadLogger.logConvertedSmall],
-                "large": [uploadConverter.createLarge, uploadLogger.logConvertedLarge]
+                "thumb": [
+                    uploadConverter.createThumb,
+                    uploadLogger.logConvertedThumb
+                ],
+                "small": [
+                    uploadConverter.createSmall,
+                    uploadLogger.logConvertedSmall
+                ],
+                "large": [
+                    uploadConverter.createLarge,
+                    uploadLogger.logConvertedLarge
+                ]
             }
+            # 品質80で変換
             for c in converts.keys():
                 dir = os.path.join(fileDir, c)
                 img = converts[c][0]()
@@ -318,7 +327,11 @@ def processConvertRequest(params):
                         quality=80
                     )
                 converts[c][1]()
+            # 変換完了を記録
             uploadLogger.logCompleted(illustID)
+            # 通知を送る
+            notifier = NotifyClient(conn)
+            notifier.sendArtNotify(illustID)
     except Exception as e:
         print(e)
         for folder in ["orig", "thumb", "small", "large"]:
@@ -333,7 +346,8 @@ def processConvertRequest(params):
         else:
             uploadLogger.logServerExplodedError()
         return
-    return
+    conn.close()
+    return True
 
 
 if __name__ == "__main__":
