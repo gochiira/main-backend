@@ -139,6 +139,7 @@ class UploadLogger():
             "UPDATE data_upload SET uploadStatus = 5, uploadFinishedDate = NOW(), illustID=%s WHERE uploadID = %s",
             (self.uploadID, illustID)
         )
+        self.conn.commit()
         return True
 
     def logDuplicatedImageError(self):
