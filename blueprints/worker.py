@@ -137,7 +137,7 @@ class UploadLogger():
     def logCompleted(self, illustID):
         self.conn.edit(
             "UPDATE data_upload SET uploadStatus = 5, uploadFinishedDate = NOW(), illustID=%s WHERE uploadID = %s",
-            (self.uploadID, illustID)
+            (illustID, self.uploadID)
         )
         self.conn.commit()
         return True

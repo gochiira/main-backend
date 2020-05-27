@@ -75,11 +75,12 @@ def createArt():
     # 画像パラメータ確認
     if not any([
         params["imageUrl"].startswith("https://twitter.com/"),
+        params["imageUrl"].startswith("https://mobile.twitter.com/"),
         params["imageUrl"].startswith("https://www.pixiv.net/"),
         params["imageUrl"].startswith("https://cdn.gochiusa.team/temp/"),
         params["imageUrl"].startswith("http://192.168.0.3:5000/static/temp/")
     ]):
-        return jsonify(status='400', message='bad request: not valid url')
+        return jsonify(status=400, message='bad request: not valid url')
     # バリデーションする
     params["title"] = g.validate(params.get(
         "title", "無題"), lengthMax=50, escape=False)
