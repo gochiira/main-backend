@@ -32,6 +32,8 @@ scrape_api = Blueprint('scrape_api', __name__)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
 def getArtByTwitter():
+    if g.userPermission not in [0, 9]:
+        return jsonify(status=400, message='Bad request')
     params = request.get_json()
     if not params:
         return jsonify(status='400', message='bad request')
@@ -53,6 +55,8 @@ def getArtByTwitter():
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
 def getArtByPixiv():
+    if g.userPermission not in [0, 9]:
+        return jsonify(status=400, message='Bad request')
     params = request.get_json()
     if not params:
         return jsonify(status='400', message='bad request')
@@ -79,6 +83,8 @@ def getArtByPixiv():
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
 def getArtBySelf():
+    if g.userPermission not in [0, 9]:
+        return jsonify(status=400, message='Bad request')
     # これだけアップロードか何か、エンドポイント変えたほうがいいような気がする...
     if "file" not in request.files:
         return jsonify(status=400, message="File must be included")

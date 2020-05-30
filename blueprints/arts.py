@@ -24,6 +24,8 @@ arts_api = Blueprint('arts_api', __name__)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
 def createArt():
+    if g.userPermission not in [0, 9]:
+        return jsonify(status=400, message='Bad request')
     '''
     画像複数対応は面倒くさいのでとりあえずなしにしましょう
 
@@ -104,6 +106,8 @@ def createArt():
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
 def destroyArt(illustID):
+    if g.userPermission not in [0, 9]:
+        return jsonify(status=400, message='Bad request')
     params = request.get_json()
     return jsonify(status=404, message="NotImplemented")
 
@@ -294,6 +298,8 @@ def editArt(illustID):
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
 def deleteArtTag(illustID):
+    if g.userPermission not in [0, 9]:
+        return jsonify(status=400, message='Bad request')
     params = request.get_json()
     if not params:
         return jsonify(status=400, message="Request parameters are not satisfied.")
@@ -343,6 +349,8 @@ def getArtTag(illustID):
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
 def addArtTag(illustID):
+    if g.userPermission not in [0, 9]:
+        return jsonify(status=400, message='Bad request')
     params = request.get_json()
     if not params:
         return jsonify(status=400, message="Request parameters are not satisfied.")
@@ -375,6 +383,8 @@ def addArtTag(illustID):
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
 def deleteArtCharacter(illustID):
+    if g.userPermission not in [0, 9]:
+        return jsonify(status=400, message='Bad request')
     params = request.get_json()
     if not params:
         return jsonify(status=400, message="Request parameters are not satisfied.")
@@ -400,6 +410,8 @@ def deleteArtCharacter(illustID):
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
 def getArtCharacter(illustID):
+    if g.userPermission not in [0, 9]:
+        return jsonify(status=400, message='Bad request')
     '''指定されたイラスト付属のキャラ一覧を、フルデータとして取得する'''
     resp = g.db.get(
         "SELECT * FROM info_tag "
@@ -424,6 +436,8 @@ def getArtCharacter(illustID):
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
 def addArtCharacter(illustID):
+    if g.userPermission not in [0, 9]:
+        return jsonify(status=400, message='Bad request')
     params = request.get_json()
     if not params:
         return jsonify(status=400, message="Request parameters are not satisfied.")
@@ -456,6 +470,8 @@ def addArtCharacter(illustID):
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
 def addArtLike(illustID):
+    if g.userPermission not in [0, 9]:
+        return jsonify(status=400, message='Bad request')
     resp = g.db.edit(
         "UPDATE data_illust SET illustLike = illustLike + 1 WHERE illustID = %s",
         (illustID,)
@@ -473,6 +489,8 @@ def addArtLike(illustID):
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
 def toggleArtBookmark(illustID):
+    if g.userPermission not in [0, 9]:
+        return jsonify(status=400, message='Bad request')
     isExist = g.db.get(
         "SELECT favoriteID FROM data_favorite"
     )
