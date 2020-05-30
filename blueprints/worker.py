@@ -170,7 +170,7 @@ def processConvertRequest(params):
     illustOriginSite = params.get("originService", "不明")
     illustNsfw = params.get("nsfw", "0")
     illustNsfw = "1" if illustNsfw not in [0, "0", "False", "false"] else "0"
-    # 出典時点の重複確認
+    # 出典時点の重複確認(?page=1 まで含まれる)
     resp = conn.get(
         "SELECT illustID FROM data_illust WHERE illustOriginUrl=%s AND illustOriginUrl <> 'https://gochiusa.com'",
         (illustOriginUrl,)
