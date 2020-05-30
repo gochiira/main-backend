@@ -48,7 +48,7 @@ def createArt():
     # 最低限のパラメータ確認
     params = request.get_json()
     if not params:
-        return jsonify(status='400', message='bad request: not json')
+        return jsonify(status=400, message='bad request: not json')
     # パラメータ確認
     requiredParams = set(("title", "originService"))
     validParams = [
@@ -66,7 +66,7 @@ def createArt():
     # print(params.items())
     params = {p: params[p] for p in params.keys() if p in validParams}
     if not requiredParams.issubset(params.keys()):
-        return jsonify(status='400', message='bad request: not enough')
+        return jsonify(status=400, message='bad request: not enough')
     # 作者パラメータ確認
     if "name" not in params["artist"]\
             and "twitterID" not in params["artist"]\
@@ -253,6 +253,8 @@ def editArt(illustID):
         "caption": "illustDescription",
         "date": "illustDate",
         "page": "illustPage",
+        "tag": "tag",
+        "chara": "chara",
         "originUrl": "illustOriginUrl",
         "originService": "illustOriginSite",
         "illustLikeCount": "illustLike",
@@ -261,10 +263,15 @@ def editArt(illustID):
     }
     params = {validParams[p]: params[p] for p in params.keys() if p in validParams.keys()}
     if not params:
+        g.db.rollback()
         return jsonify(status=400, message="Request parameters are not satisfied.")
+    for extra in ['tag', 'chara']:
+        if extra in params.keys():
+            del params[extra]
     if "artistID" in params.keys():
         isExist = g.db.has("info_artist", "artistID=%s", (params[p],))
         if not isExist:
+            g.db.rollback()
             return jsonify(status=400, message="Specified artist was not found.")
     for p in params.keys():
         resp = g.db.edit(
