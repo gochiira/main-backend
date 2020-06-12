@@ -3,6 +3,7 @@ from .authorizator import auth, token_serializer
 from .limiter import apiLimiter, handleApiPermission
 from .recorder import recordApiRequest
 from .worker import processConvertRequest
+from .cache import apiCache
 from datetime import datetime
 from redis import Redis
 from rq import Queue
@@ -115,6 +116,7 @@ def destroyArt(illustID):
 @arts_api.route('/<int:illustID>', methods=["GET"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
+@apiCache.cached(timeout=5)
 def getArt(illustID):
     artData = g.db.get(
         """SELECT
