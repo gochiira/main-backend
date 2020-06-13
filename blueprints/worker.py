@@ -176,7 +176,6 @@ def processConvertRequest(params):
         (illustOriginUrl,)
     )
     if resp:
-        conn.rollback()
         uploadLogger.logDuplicatedImageError()
         return
     # 既存の作者でなければ新規作成
@@ -269,8 +268,9 @@ def processConvertRequest(params):
             else:
                 shutil.move(params["imageUrl"][params["imageUrl"].find(
                     "/static/temp/")+1:], fileOrigPath)
-            # 画像時点の重複確認
+            # 画像時点の重複確認(後日ファイルハッシュを使うようにする)
             hash = int(str(imagehash.phash(Image.open(fileOrigPath))), 16)
+            '''
             is_match = conn.get(
                 "SELECT illustID, illustName, data_illust.artistID, artistName, BIT_COUNT(illustHash ^ %s) AS SAME FROM `data_illust` INNER JOIN info_artist ON info_artist.artistID = data_illust.artistID HAVING SAME = 0",
                 (hash,)
@@ -278,6 +278,7 @@ def processConvertRequest(params):
             if is_match:
                 isConflict = True
                 raise Exception('Conflict')
+            '''
             # Origデータを移動
             origType = what_img(fileOrigPath)
             if origType not in ["png", "jpg", "gif", "webp"]:
