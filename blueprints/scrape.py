@@ -11,9 +11,25 @@ from uuid import uuid4
 import os.path
 import shutil
 from imghdr import what as what_img
+from imghdr import tests
 
 CDN_ADDRESS = "https://api.gochiusa.team/static/temp/"
 ALLOWED_EXTENSIONS = ["gif", "png", "jpg", "jpeg", "webp"]
+JPEG_MARK = b'\xff\xd8\xff\xdb\x00C\x00\x08\x06\x06' \
+            b'\x07\x06\x05\x08\x07\x07\x07\t\t\x08\n\x0c\x14\r\x0c\x0b\x0b\x0c\x19\x12\x13\x0f'
+
+
+def test_jpeg(h, f):
+    """JPEG data in JFIF format"""
+    if b'JFIF' in h[:23]:
+        return 'jpeg'
+    """JPEG with small header"""
+    if len(h) >= 32 and 67 == h[5] and h[:32] == JPEG_MARK:
+        return 'jpeg'
+    """JPEG data in JFIF or Exif format"""
+    if h[6:10] in (b'JFIF', b'Exif') or h[:2] == b'\xff\xd8':
+        return 'jpeg'
+tests.append(test_jpeg)
 
 
 def isNotAllowedFile(filename):
