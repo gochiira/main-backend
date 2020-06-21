@@ -223,7 +223,7 @@ def processConvertRequest(params):
         "SELECT illustID FROM data_illust WHERE illustName=%s ORDER BY illustID DESC", (illustName,))[0][0]
     # タグ情報取得/作成
     # キャラ情報取得/作成
-    for i, k in enumerate(["tag", "chara"]):
+    for i, k in enumerate(["tag", "chara", "group", "system"]):
         if k in params.keys():
             for t in params[k]:
                 if not conn.has("info_tag", "tagName=%s", (t,)):
