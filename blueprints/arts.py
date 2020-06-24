@@ -153,15 +153,15 @@ def getArt(illustID):
         return jsonify(status=404, message="The art data was not found.")
     artData = artData[0]
     # タグ情報取得
-    tagData = g.db.get(
-        "SELECT tagID,tagName,tagNsfw FROM data_tag natural join info_tag WHERE illustID = %s AND tagType=0",
+    tagDataList = g.db.get(
+        "SELECT tagID,tagName,tagNsfw,tagType FROM data_tag natural join info_tag WHERE illustID = %s",
         (illustID,)
     )
-    # キャラ情報取得
-    charaData = g.db.get(
-        "SELECT tagID,tagName,tagNsfw FROM data_tag natural join info_tag WHERE illustID = %s AND tagType=1",
-        (illustID,)
-    )
+    # リストを分ける
+    tagData = [[t[0], t[1], t[2]] for t in tagDataList if t[3] == 0]
+    charaData = [[t[0], t[1]] for t in tagDataList if t[3] == 1]
+    groupData = [[t[0], t[1]] for t in tagDataList if t[3] == 2]
+    systemData = [[t[0], t[1]] for t in tagDataList if t[3] == 3]
     return jsonify(status=200, data={
         "illustID": artData[0],
         "title": artData[1],
@@ -182,8 +182,10 @@ def getArt(illustID):
             "id": artData[13],
             "name": artData[14]
         },
-        "tag": [[t[0], t[1], t[2]] for t in tagData],
-        "chara": [[c[0], c[1]] for c in charaData]
+        "tag": tagData,
+        "chara": charaData,
+        "group": groupData,
+        "system": systemData
     })
 
 
