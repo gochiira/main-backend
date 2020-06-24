@@ -63,6 +63,8 @@ def createArt():
         "artist",
         "tag",
         "chara",
+        "system",
+        "group",
         "nsfw"
     ]
     # 必須パラメータ確認
