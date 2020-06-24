@@ -204,7 +204,7 @@ def editArt(illustID):
         (illustID,)
     )
     # タグとキャラの追加
-    for i, k in enumerate(["tag", "chara"]):
+    for i, k in enumerate(["tag", "chara", "group", "system"]):
         if k in params.keys():
             for t in params[k]:
                 # 存在しないタグは作成
