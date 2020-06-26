@@ -164,6 +164,15 @@ def getArt(illustID):
     charaData = [[t[0], t[1]] for t in tagDataList if t[3] == 1]
     groupData = [[t[0], t[1]] for t in tagDataList if t[3] == 2]
     systemData = [[t[0], t[1]] for t in tagDataList if t[3] == 3]
+    # マイリストカウント取得
+    mylistCount = g.db.get(
+        "SELECT COUNT(illustID) FROM data_mylist GROUP BY illustID WHERE illustID = %s",
+        (illustID,)
+    )
+    if mylistCount:
+        mylistCount = mylistCount[0][0]
+    else:
+        mylistCount = 0
     return jsonify(status=200, data={
         "illustID": artData[0],
         "title": artData[1],
@@ -171,6 +180,7 @@ def getArt(illustID):
         "date": artData[3].strftime('%Y-%m-%d %H:%M:%S'),
         "pages": artData[4],
         "like": artData[5],
+        "mylist": mylistCount,
         "originUrl": artData[6],
         "originService": artData[7],
         "nsfw": artData[8],
