@@ -166,7 +166,7 @@ def getArt(illustID):
     systemData = [[t[0], t[1]] for t in tagDataList if t[3] == 3]
     # マイリストカウント取得
     mylistCount = g.db.get(
-        "SELECT COUNT(illustID) FROM data_mylist GROUP BY illustID WHERE illustID = %s",
+        "SELECT COUNT(illustID) FROM data_mylist WHERE illustID = %s",
         (illustID,)
     )
     if mylistCount:
