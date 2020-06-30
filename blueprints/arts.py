@@ -169,10 +169,13 @@ def getArt(illustID):
         "SELECT COUNT(illustID) FROM data_mylist WHERE illustID = %s",
         (illustID,)
     )
-    if mylistCount:
-        mylistCount = mylistCount[0][0]
-    else:
-        mylistCount = 0
+    mylistCount = mylistCount[0][0] if mylistCount else 0
+    # マイリスト済みか取得
+    isMylisted = g.db.has(
+        "data_mylist",
+        "mylistID IN (SELECT mylistID FROM info_mylist WHERE userID=%s) AND illustID = %s",
+        (g.userID, illustID)
+    )
     return jsonify(status=200, data={
         "illustID": artData[0],
         "title": artData[1],
@@ -181,6 +184,7 @@ def getArt(illustID):
         "pages": artData[4],
         "like": artData[5],
         "mylist": mylistCount,
+        "mylisted": isMylisted,
         "originUrl": artData[6],
         "originService": artData[7],
         "nsfw": artData[8],
