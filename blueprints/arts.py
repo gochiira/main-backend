@@ -111,8 +111,14 @@ def createArt():
 def destroyArt(illustID):
     if g.userPermission not in [0, 9]:
         return jsonify(status=400, message='Bad request')
-    params = request.get_json()
-    return jsonify(status=404, message="NotImplemented")
+    # 完全非表示状態にする
+    resp = g.db.edit(
+        "UPDATE data_illust SET illustStatus=1 WHERE illustID=%s",
+        (illustID,)
+    )
+    if not resp:
+        return jsonify(status=500, message="Server bombed")
+    return jsonify(status=200, message="success")
 
 
 @arts_api.route('/<int:illustID>', methods=["GET"], strict_slashes=False)
@@ -153,6 +159,8 @@ def getArt(illustID):
         (illustID,)
     )
     if not len(artData):
+        return jsonify(status=404, message="The art data was not found.")
+    if artData[0][15] == 1:
         return jsonify(status=404, message="The art data was not found.")
     artData = artData[0]
     # タグ情報取得
