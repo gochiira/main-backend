@@ -57,7 +57,7 @@ class UploadImageProcessor():
 
     def getImageSize(self):
         h, w, _ = self.orig.shape
-        return h,w
+        return h, w
 
     def createOrig(self, img_src):
         # PNG/WEBPに変換する
@@ -225,22 +225,6 @@ def processConvertRequest(params):
     # 登録した画像のIDを取得
     illustID = conn.get(
         "SELECT illustID FROM data_illust WHERE illustName=%s ORDER BY illustID DESC", (illustName,))[0][0]
-    # タグ情報取得/作成
-    # キャラ情報取得/作成
-    for i, k in enumerate(["tag", "chara", "group", "system"]):
-        if k in params.keys():
-            for t in params[k]:
-                if not conn.has("info_tag", "tagName=%s", (t,)):
-                    conn.edit(
-                        "INSERT INTO info_tag (userID,tagName,tagType,tagNsfw) VALUES (%s,%s,%s,0)", (userID, t, i), False)
-                tagID = conn.get(
-                    "SELECT tagID FROM info_tag WHERE tagName=%s", (t,))[0][0]
-                resp = conn.edit("INSERT INTO data_tag (illustID,tagID) VALUES (%s,%s)", (str(
-                    illustID), str(tagID)), False)
-                if not resp:
-                    conn.rollback()
-                    uploadLogger.logServerExplodedError()
-                    return
     # 画像保存処理
     isConflict = False
     fileDir = "static/illusts/"
@@ -255,7 +239,8 @@ def processConvertRequest(params):
                 query = parse_query(
                     params["imageUrl"][params["imageUrl"].find("?")+1:])
                 page = int(query["page"][0]) - 1
-                params["imageUrl"] = params["imageUrl"][:params["imageUrl"].find("?")]
+                params["imageUrl"] = params["imageUrl"][:params["imageUrl"].find(
+                    "?")]
             # ツイッターから取る場合
             if params["imageUrl"].startswith("https://twitter.com/"):
                 tg = TweetGetter()
@@ -305,10 +290,18 @@ def processConvertRequest(params):
                 conn.rollback()
                 uploadLogger.logServerExplodedError()
                 return
-            # 画像の変換/保存処理
             uploadConverter = UploadImageProcessor(fileOrigPath)
-            shutil.move(fileOrigPath, os.path.join(
-                fileDir, "orig", f"{illustID}.{origType}"))
+            # 画像の変換/保存処理
+            # 元画像を保管
+            shutil.move(
+                fileOrigPath,
+                os.path.join(
+                    fileDir,
+                    "orig",
+                    f"{illustID}.{origType}"
+                )
+            )
+            # それ以外は品質80で変換
             converts = {
                 "thumb": [
                     uploadConverter.createThumb,
@@ -323,15 +316,6 @@ def processConvertRequest(params):
                     uploadLogger.logConvertedLarge
                 ]
             }
-            width, height = uploadConverter.getImageSize()
-            resp = conn.edit(
-                "UPDATE data_illust SET illustWidth = %s, illustHeight = %s WHERE illustID = %s",
-                (width, height, illustID),
-                False
-            )
-            if not resp:
-                raise Exception("Image info set error")
-            # 品質80で変換
             for c in converts.keys():
                 dir = os.path.join(fileDir, c)
                 img = converts[c][0]()
@@ -360,6 +344,48 @@ def processConvertRequest(params):
         else:
             uploadLogger.logServerExplodedError()
         return
+    # 画像サイズ取得
+    width, height = uploadConverter.getImageSize()
+    resp = conn.edit(
+        "UPDATE data_illust SET illustWidth = %s, illustHeight = %s WHERE illustID = %s",
+        (width, height, illustID),
+        False
+    )
+    if not resp:
+        raise Exception("Image info set error")
+    # システムタグ追加
+    if not params["system"]:
+        params["system"] = []
+    if (width <= 720 and height <= 480)\
+            or (height <= 720 and width <= 480):
+        params["system"].append("SD")
+    elif (width <= 1280 and height <= 720)\
+            or (height <= 1280 and width <= 720):
+        params["system"].append("HD")
+    elif (width <= 1920 and height <= 1080)\
+            or (height <= 1920 and width <= 1080):
+        params["system"].append("FHD")
+    elif (width <= 2560 and height <= 1440)\
+            or (height <= 2560 and width <= 1440):
+        params["system"].append("2K")
+    else:
+        params["system"].append("4K")
+    # タグ情報取得作成
+    # キャラ情報取得作成
+    for i, k in enumerate(["tag", "chara", "group", "system"]):
+        if k in params.keys():
+            for t in params[k]:
+                if not conn.has("info_tag", "tagName=%s", (t,)):
+                    conn.edit(
+                        "INSERT INTO info_tag (userID,tagName,tagType,tagNsfw) VALUES (%s,%s,%s,0)", (userID, t, i), False)
+                tagID = conn.get(
+                    "SELECT tagID FROM info_tag WHERE tagName=%s", (t,))[0][0]
+                resp = conn.edit("INSERT INTO data_tag (illustID,tagID) VALUES (%s,%s)", (str(
+                    illustID), str(tagID)), False)
+                if not resp:
+                    conn.rollback()
+                    uploadLogger.logServerExplodedError()
+                    return
     conn.close()
     return True
 
