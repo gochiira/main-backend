@@ -136,7 +136,8 @@ def getArt(illustID):
             data_illust.artistID,
             artistName,
             data_illust.userID,
-            userName
+            userName,
+            illustStatus
         FROM
             data_illust
         INNER JOIN
@@ -187,6 +188,7 @@ def getArt(illustID):
         "mylisted": isMylisted,
         "originUrl": artData[6],
         "originService": artData[7],
+        "status": artData[15],
         "nsfw": artData[8],
         "hash": artData[9],
         "extension": artData[10],
@@ -283,7 +285,8 @@ def editArt(illustID):
         "originService": "illustOriginSite",
         "illustLikeCount": "illustLike",
         "illustOwnerId": "userID",
-        "nsfw": "illustNsfw"
+        "nsfw": "illustNsfw",
+        "status": "illustStatus"
     }
     params = {validParams[p]: params[p] for p in params.keys() if p in validParams.keys()}
     if not params:

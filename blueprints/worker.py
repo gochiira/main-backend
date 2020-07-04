@@ -55,6 +55,10 @@ class UploadImageProcessor():
             resp = imgObj.resize((new_x, new_y), Image.LANCZOS)
             return resp
 
+    def getImageSize(self):
+        h, w, _ = self.orig.shape
+        return h,w
+
     def createOrig(self, img_src):
         # PNG/WEBPに変換する
         imgObj = Image.open(img_src).convert("RGB")
@@ -319,6 +323,14 @@ def processConvertRequest(params):
                     uploadLogger.logConvertedLarge
                 ]
             }
+            width, height = uploadConverter.getImageSize()
+            resp = conn.edit(
+                "UPDATE data_illust SET illustWidth = %s, illustHeight = %s WHERE illustID = %s",
+                (width, height, illustID),
+                False
+            )
+            if not resp:
+                raise Exception("Image info set error")
             # 品質80で変換
             for c in converts.keys():
                 dir = os.path.join(fileDir, c)
