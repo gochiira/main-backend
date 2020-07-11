@@ -280,10 +280,13 @@ def processConvertRequest(params):
             # 正しい拡張子に変更
             shutil.move(fileOrigPath, fileOrigPath.replace("raw", origType))
             fileOrigPath = fileOrigPath.replace("raw", origType)
+            fileSize = os.path.getsize(fileOrigPath)
             # 画像処理時点のデータ登録
             resp = conn.edit(
-                "UPDATE data_illust SET illustExtension = %s, illustHash = %s WHERE illustID = %s",
-                (origType, hash, illustID),
+                "UPDATE data_illust"
+                + "SET illustExtension=%s,illustHash=%s,illustBytes=%s"
+                + "WHERE illustID = %s",
+                (origType, hash, fileSize, illustID),
                 False
             )
             if not resp:
