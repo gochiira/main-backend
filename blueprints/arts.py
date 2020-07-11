@@ -7,6 +7,7 @@ from .cache import apiCache
 from datetime import datetime
 from redis import Redis
 from rq import Queue
+from hurry.filesize import size
 import os
 import tempfile
 import json
@@ -111,7 +112,8 @@ def createArt():
 def destroyArt(illustID):
     if g.userPermission not in [0, 9]:
         return jsonify(status=400, message='Bad request')
-    # 完全非表示状態にする
+    # TODO: 管理ユーザー: ファイルから削除する
+    # 通常ユーザー: 非表示状態にする
     resp = g.db.edit(
         "UPDATE data_illust SET illustStatus=1 WHERE illustID=%s",
         (illustID,)
@@ -126,6 +128,7 @@ def destroyArt(illustID):
 @apiLimiter.limit(handleApiPermission)
 @apiCache.cached(timeout=5)
 def getArt(illustID):
+    # TODO: 置き換え情報の取得と応答
     artData = g.db.get(
         """SELECT
             data_illust.illustID,
@@ -143,7 +146,10 @@ def getArt(illustID):
             artistName,
             data_illust.userID,
             userName,
-            illustStatus
+            illustStatus,
+            illustWidth,
+            illustHeight,
+            illustBytes
         FROM
             data_illust
         INNER JOIN
@@ -160,7 +166,7 @@ def getArt(illustID):
     )
     if not len(artData):
         return jsonify(status=404, message="The art data was not found.")
-    if artData[0][15] == 1:
+    if artData[0][15] == 2:
         return jsonify(status=404, message="The art data was not found.")
     artData = artData[0]
     # タグ情報取得
@@ -196,7 +202,6 @@ def getArt(illustID):
         "mylisted": isMylisted,
         "originUrl": artData[6],
         "originService": artData[7],
-        "status": artData[15],
         "nsfw": artData[8],
         "hash": artData[9],
         "extension": artData[10],
@@ -208,6 +213,10 @@ def getArt(illustID):
             "id": artData[13],
             "name": artData[14]
         },
+        "status": artData[15],
+        "width": artData[16],
+        "height": artData[17],
+        "filesize": size(artData[18]),
         "tag": tagData,
         "chara": charaData,
         "group": groupData,
@@ -219,6 +228,7 @@ def getArt(illustID):
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
 def editArt(illustID):
+    # TODO: 権限確認処理の欠如をどうにかする
     params = request.get_json()
     if not params:
         return jsonify(status=400, message="Request parameters are not satisfied.")
@@ -319,6 +329,137 @@ def editArt(illustID):
             return jsonify(status=500, message="Server bombed.")
     g.db.commit()
     return jsonify(status=200, message="Update succeed.")
+
+
+@arts_api.route('/<int:illustLowerID>/replace', methods=["PUT"], strict_slashes=False)
+@auth.login_required
+@apiLimiter.limit(handleApiPermission)
+def replaceArt(illustLowerID):
+    if g.userPermission not in [0, 9]:
+        return jsonify(status=400, message='Bad request')
+    params = request.get_json()
+    if not params:
+        return jsonify(status=400, message="Request parameters are not satisfied.")
+    if "status" not in params or "illustID" not in params:
+        return jsonify(status=400, message="Request parameters are not satisfied.")
+    # 置き換えられるIDが illustLowerID
+    # 置き換え(よりよい方)が illustGreaterID
+    illustGreaterID = int(params["illustID"])
+    # 処理の確認 (置き換え後にどうなるかを返す)
+    if params["status"] != 1:
+        resp = {}
+        for id in [illustLowerID, illustGreaterID]:
+            artData = g.db.get(
+                """SELECT
+                    data_illust.illustID,
+                    illustName,
+                    illustDescription,
+                    illustDate,
+                    illustPage,
+                    illustLike,
+                    illustOriginUrl,
+                    illustOriginSite,
+                    illustNsfw,
+                    illustHash,
+                    illustExtension,
+                    data_illust.artistID,
+                    artistName,
+                    data_illust.userID,
+                    userName,
+                    illustStatus,
+                    illustWidth,
+                    illustHeight,
+                    illustBytes
+                FROM
+                    data_illust
+                INNER JOIN
+                    info_artist
+                ON
+                    data_illust.artistID = info_artist.artistID
+                INNER JOIN
+                    data_user
+                ON
+                    data_illust.userID = data_user.userID
+                WHERE
+                    illustID = %s""",
+                (id,)
+            )
+            if not len(artData):
+                return jsonify(status=404, message="The art data was not found.")
+            artData = artData[0]
+            resp["to" if id == illustGreaterID else "from"] = {
+                "illustID": artData[0],
+                "title": artData[1],
+                "caption": artData[2],
+                "date": artData[3].strftime('%Y-%m-%d %H:%M:%S'),
+                "pages": artData[4],
+                "like": artData[5],
+                "originUrl": artData[6],
+                "originService": artData[7],
+                "nsfw": artData[8],
+                "hash": artData[9],
+                "extension": artData[10],
+                "artist": {
+                    "id": artData[11],
+                    "name": artData[12]
+                },
+                "user": {
+                    "id": artData[13],
+                    "name": artData[14]
+                },
+                "status": artData[15],
+                "width": artData[16],
+                "height": artData[17],
+                "filesize": size(artData[18])
+            }
+        return jsonify(status=200, message="ok", data=resp)
+    # 実際に処理する
+    # 古いイラストを非表示にする
+    resp = g.db.edit(
+        "UPDATE data_illust SET illustStatus=1 WHERE illustID = %s",
+        (illustLowerID,)
+    )
+    if not resp:
+        return jsonify(status=500, message="Server bombed.")
+    # 古いイラストのいいねを読み出す
+    oldLikeCount = g.db.get(
+        "SELECT illustLike FROM data_illust WHERE illustID = %s",
+        (illustLowerID,)
+    )
+    if not oldLikeCount:
+        return jsonify(status=500, message="Server bombed.")
+    oldLikeCount = oldLikeCount[0][0]
+    # 新しい方にいいねを足す
+    resp = g.db.edit(
+        "UPDATE data_illust SET illustLike=illustLike+%s WHERE illustID = %s",
+        (oldLikeCount, illustGreaterID)
+    )
+    if not resp:
+        return jsonify(status=500, message="Server bombed.")
+    # 古い方のイラストのタグを読み出す
+    oldTags = g.db.get(
+        "SELECT tagID FROM data_tag WHERE illustID = %s",
+        (illustLowerID,)
+    )
+    if not oldTags:
+        return jsonify(status=500, message="Server bombed.")
+    oldTags = [t[0] for t in oldTags]
+    # 新しい方のタグを統合する
+    # エラーが発生しても握りつぶされるのでスルー
+    for t in oldTags:
+        g.db.edit(
+            "INSERT INTO data_tag (illustID,tagID) VALUES (%s, %s)",
+            (illustGreaterID, t)
+        )
+    # 置き換え情報を挿入する(どちらがどちらを置き換えたかはカラムでわかる)
+    resp = g.db.edit(
+        "INSERT INTO data_replace "
+        + "(illustGreaterID,illustLowerID) VALUES (%s,%s)",
+        (illustGreaterID, illustLowerID)
+    )
+    if not resp:
+        return jsonify(status=500, message="Server bombed.")
+    return jsonify(status=200, message="Replace succeed")
 
 #
 # イラストのタグ関連
