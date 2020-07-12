@@ -56,7 +56,7 @@ class UploadImageProcessor():
             return resp
 
     def getImageSize(self):
-        h, w, _ = self.orig.shape
+        h, w = self.orig.size
         return h, w
 
     def createOrig(self, img_src):
@@ -283,8 +283,8 @@ def processConvertRequest(params):
             fileSize = os.path.getsize(fileOrigPath)
             # 画像処理時点のデータ登録
             resp = conn.edit(
-                "UPDATE data_illust"
-                + "SET illustExtension=%s,illustHash=%s,illustBytes=%s"
+                "UPDATE data_illust "
+                + "SET illustExtension=%s, illustHash=%s, illustBytes=%s "
                 + "WHERE illustID = %s",
                 (origType, hash, fileSize, illustID),
                 False
@@ -328,11 +328,6 @@ def processConvertRequest(params):
                         quality=80
                     )
                 converts[c][1]()
-            # 変換完了を記録
-            uploadLogger.logCompleted(illustID)
-            # 通知を送る
-            notifier = NotifyClient(conn)
-            notifier.sendArtNotify(illustID)
     except Exception as e:
         print(e)
         for folder in ["orig", "thumb", "small", "large"]:
@@ -389,6 +384,11 @@ def processConvertRequest(params):
                     conn.rollback()
                     uploadLogger.logServerExplodedError()
                     return
+    # 変換完了を記録
+    uploadLogger.logCompleted(illustID)
+    # 通知を送る
+    notifier = NotifyClient(conn)
+    notifier.sendArtNotify(illustID)
     conn.close()
     return True
 
