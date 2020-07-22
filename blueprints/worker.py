@@ -11,6 +11,7 @@ import os
 import shutil
 import imagehash
 import traceback
+import requests
 
 '''
 REQ
@@ -390,6 +391,14 @@ def processConvertRequest(params):
     notifier = NotifyClient(conn)
     notifier.sendArtNotify(illustID)
     conn.close()
+    # ユーザーにPYONを与える
+    requests.post(
+        "http://localhost:7070/users/transactions/create",
+        json={"target_user_id": userID, "amount": 2},
+        headers={
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJpZCI6MCwic2VxIjoxLCJpc19hZG1pbiI6MH0.PNLYxn1Chr0iBSIqujI2ofWoq5gR-24EWQSwjG9h4M4"
+        }
+    )
     return True
 
 
