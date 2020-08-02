@@ -1,4 +1,5 @@
 from PIL import Image
+from itsdangerous import JSONWebSignatureSerializer as Serializer
 from tempfile import TemporaryDirectory
 from urllib.parse import parse_qs as parse_query
 from .lib.pixiv_client import IllustGetter
@@ -6,7 +7,6 @@ from .lib.twitter_client import TweetGetter
 from .lib.notify_client import NotifyClient
 from .db import SQLHandler
 from imghdr import what as what_img
-from PIL import Image
 import os
 import shutil
 import imagehash
@@ -390,15 +390,18 @@ def processConvertRequest(params):
     # 通知を送る
     notifier = NotifyClient(conn)
     notifier.sendArtNotify(illustID)
-    conn.close()
     # ユーザーにPYONを与える
+    toymoneyKey = conn.get("SELECT userToyApiKey FROM data_user WHERE userID=%s", (userID,))[0][0]
+    token_serializer = Serializer("UNSAFE_SECRET_KEY")
+    toymoneyID = token_serializer.loads(toymoneyKey)['id']
     requests.post(
         "http://localhost:7070/users/transactions/create",
-        json={"target_user_id": userID, "amount": 2},
+        json={"target_user_id": toymoneyID, "amount": 2},
         headers={
             "Authorization": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJpZCI6MCwic2VxIjoxLCJpc19hZG1pbiI6MH0.PNLYxn1Chr0iBSIqujI2ofWoq5gR-24EWQSwjG9h4M4"
         }
     )
+    conn.close()
     return True
 
 
