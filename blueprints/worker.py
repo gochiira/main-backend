@@ -2,6 +2,7 @@ from PIL import Image
 from itsdangerous import JSONWebSignatureSerializer as Serializer
 from tempfile import TemporaryDirectory
 from urllib.parse import parse_qs as parse_query
+from .lib.seiga_client import SeigaGetter
 from .lib.pixiv_client import IllustGetter
 from .lib.twitter_client import TweetGetter
 from .lib.notify_client import NotifyClient
@@ -248,6 +249,11 @@ def processConvertRequest(params):
                 imgs = tg.getTweet(params["imageUrl"])['illust']['imgs']
                 img_addr = imgs[page]["large_src"]
                 tg.downloadIllust(img_addr, fileOrigPath)
+            # ニコニコ静画から取る場合
+            elif params["imageUrl"].startswith("https://seiga.nicovideo.jp/"):
+                sg = SeigaGetter()
+                img_addr = sg.getIllustSourceUrl(params["imageUrl"])
+                sg.downloadIllust(img_addr, fileOrigPath)
             # Pixivから取る場合
             elif params["imageUrl"].startswith("https://www.pixiv.net/"):
                 ig = IllustGetter()

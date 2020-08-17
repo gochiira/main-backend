@@ -5,6 +5,7 @@ from .limiter import apiLimiter, handleApiPermission
 from .recorder import recordApiRequest
 from .lib.pixiv_client import IllustGetter
 from .lib.twitter_client import TweetGetter
+from .lib.seiga_client import SeigaGetter
 from tempfile import TemporaryDirectory
 from base64 import b64encode
 from uuid import uuid4
@@ -60,7 +61,6 @@ def getArtByTwitter():
     if params['url'].find("?") != -1:
         params['url'] = params['url'][:params['url'].find("?")]
     params['url'] = params['url'].replace("mobile.", "")
-    print(params['url'])
     resp = tg.getTweet(params['url'])
     if resp == {}:
         return jsonify(status='400', message='bad request')
@@ -92,6 +92,27 @@ def getArtByPixiv():
             path = os.path.join(filePath, fileName)
             ig.downloadIllust(img['thumb_src'], path=path)
         resp["illust"]["imgs"][i]['thumb_src'] = CDN_ADDRESS + fileName
+    return jsonify(status='200', message='ok', data=resp)
+
+
+@scrape_api.route('/seiga', methods=["POST"], strict_slashes=False)
+@auth.login_required
+@apiLimiter.limit(handleApiPermission)
+def getArtByNicoNicoSeiga():
+    if g.userPermission not in [0, 9]:
+        return jsonify(status=400, message='Bad request')
+    params = request.get_json()
+    if not params:
+        return jsonify(status='400', message='bad request')
+    if 'url' not in params.keys():
+        return jsonify(status='400', message='bad request')
+    sg = SeigaGetter('blueprints/lib/seiga_auth.json')
+    # 雑なエラー対応
+    if params['url'].find("?") != -1:
+        params['url'] = params['url'][:params['url'].find("?")]
+    resp = sg.getSeiga(params['url'])
+    if resp == {}:
+        return jsonify(status='400', message='bad request')
     return jsonify(status='200', message='ok', data=resp)
 
 
