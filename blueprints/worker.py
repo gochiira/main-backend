@@ -2,6 +2,7 @@ from PIL import Image
 from itsdangerous import JSONWebSignatureSerializer as Serializer
 from tempfile import TemporaryDirectory
 from urllib.parse import parse_qs as parse_query
+from .lib.danbooru_client import DanbooruGetter
 from .lib.seiga_client import SeigaGetter
 from .lib.pixiv_client import IllustGetter
 from .lib.twitter_client import TweetGetter
@@ -254,6 +255,11 @@ def processConvertRequest(params):
                 sg = SeigaGetter()
                 img_addr = sg.getIllustSourceUrl(params["imageUrl"])
                 sg.downloadIllust(img_addr, fileOrigPath)
+            # Danbooru
+            elif params["imageUrl"].startswith("https://danbooru.donmai.us/"):
+                dg = DanbooruGetter()
+                img_addr = dg.getIllustSourceUrl(params["imageUrl"])
+                dg.downloadIllust(img_addr, fileOrigPath)
             # Pixivから取る場合
             elif params["imageUrl"].startswith("https://www.pixiv.net/"):
                 ig = IllustGetter()
