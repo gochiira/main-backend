@@ -655,3 +655,140 @@ def addArtLike(illustID):
         (illustID,)
     )
     return jsonify(status=200, message="Update succeed.", likes=resp2[0][0])
+
+
+@arts_api.route('/<int:illustID>/comments', methods=["GET"], strict_slashes=False)
+@auth.login_required
+@apiLimiter.limit(handleApiPermission)
+def getArtComments(illustID):
+    per_page = 10
+    pageID = request.args.get('page', default=1, type=int)
+    if pageID < 1:
+        pageID = 1
+    sortMethod = request.args.get('sort', default="d", type=str)
+    sortMethod = "illustDate" if sortMethod == "d" else "illustLike"
+    order = request.args.get('order', default="d", type=str)
+    order = "DESC" if order == "d" else "ASC"
+    resp = g.db.get(
+        "SELECT userID, userName, commentID, "
+        + "commentCreated, commentUpdated, commentBody "
+        + "FROM data_comment NATURAL JOIN data_user "
+        + f"WHERE illustID = {illustID} ",
+        + f"ORDER BY {sortMethod} {order} "
+        + f"LIMIT {per_page} OFFSET {per_page * (pageID - 1)}"
+    )
+    if not resp:
+        return jsonify(status=500, message="Server bombed.")
+    return jsonify(
+        status=200,
+        message="ok",
+        data=[
+            {
+                "user": {
+                    "name": resp[0],
+                    "id": resp[1],
+                },
+                "comment": {
+                    "id": resp[2],
+                    "created": resp[3],
+                    "updated": resp[4],
+                    "body": resp[5]
+                }
+            } for r in resp
+        ]
+    )
+
+
+@arts_api.route(
+    '/<int:illustID>/comments',
+    methods=["POST"],
+    strict_slashes=False
+)
+@auth.login_required
+@apiLimiter.limit(handleApiPermission)
+def addArtComment(illustID):
+    if g.userPermission not in [0, 9]:
+        return jsonify(status=400, message='Bad request')
+    params = request.get_json()
+    if not params:
+        return jsonify(
+            status=400,
+            message="Request parameters are not satisfied."
+        )
+    if 'comment' not in params.keys():
+        return jsonify(
+            status=400,
+            message="Request parameters are not satisfied."
+        )
+    comment = g.validate(params['comment'], maxLength=500)
+    resp = g.db.edit(
+        "INSERT INTO data_comment (userID, illustID, commentBody) VALUES (%s,%s,%s)",
+        (g.userID, illustID, comment)
+    )
+    if not resp:
+        return jsonify(status=500, message="Server bombed.")
+    return jsonify(status=200, message="Create comment succeed.")
+
+
+@arts_api.route(
+    '/<int:illustID>/comments/<int:commentID>',
+    methods=["PUT"],
+    strict_slashes=False
+)
+@auth.login_required
+@apiLimiter.limit(handleApiPermission)
+def editArtComment(illustID, commentID):
+    if g.userPermission not in [9]:
+        return jsonify(status=400, message='Bad request')
+    params = request.get_json()
+    if not params:
+        return jsonify(
+            status=400,
+            message="Request parameters are not satisfied."
+        )
+    if 'comment' not in params.keys():
+        return jsonify(
+            status=400,
+            message="Request parameters are not satisfied."
+        )
+    if not g.db.has(
+        "data_comment",
+        "commentID=%s AND illustID=%s",
+        (commentID, illustID)
+    ):
+        return jsonify(status=404, message="The comment was not found.")
+    comment = g.validate(params['comment'], maxLength=500)
+    resp = g.db.edit(
+        "UPDATE data_comment SET "
+        + "commentBody=%s, commentUpdated=CURRENT_TIMESTAMP() "
+        + "WHERE commentID=%s AND illustID=%s",
+        (comment, commentID, illustID)
+    )
+    if not resp:
+        return jsonify(status=500, message="Server bombed.")
+    return jsonify(status=200, message="Update comment succeed.")
+
+
+@arts_api.route(
+    '/<int:illustID>/comments/<int:commentID>',
+    methods=["DELETE"],
+    strict_slashes=False
+)
+@auth.login_required
+@apiLimiter.limit(handleApiPermission)
+def deleteArtComment(illustID, commentID):
+    if g.userPermission not in [9]:
+        return jsonify(status=400, message='Bad request')
+    if not g.db.has(
+        "data_comment",
+        "commentID=%s AND illustID=%s",
+        (commentID, illustID)
+    ):
+        return jsonify(status=404, message="The comment was not found.")
+    resp = g.db.edit(
+        "DELETE FROM data_comment WHERE commentID=%s AND illustID=%s",
+        (commentID, illustID)
+    )
+    if not resp:
+        return jsonify(status=500, message="Server bombed.")
+    return jsonify(status=200, message="Delete comment succeed.")
