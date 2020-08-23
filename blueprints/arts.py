@@ -666,14 +666,14 @@ def getArtComments(illustID):
     if pageID < 1:
         pageID = 1
     sortMethod = request.args.get('sort', default="d", type=str)
-    sortMethod = "illustDate" if sortMethod == "d" else "illustLike"
+    sortMethod = "commentID" if sortMethod == "d" else "commentUpdated"
     order = request.args.get('order', default="d", type=str)
     order = "DESC" if order == "d" else "ASC"
     resp = g.db.get(
         "SELECT userID, userName, commentID, "
         + "commentCreated, commentUpdated, commentBody "
         + "FROM data_comment NATURAL JOIN data_user "
-        + f"WHERE illustID = {illustID} ",
+        + f"WHERE illustID = {illustID} "
         + f"ORDER BY {sortMethod} {order} "
         + f"LIMIT {per_page} OFFSET {per_page * (pageID - 1)}"
     )
@@ -685,14 +685,14 @@ def getArtComments(illustID):
         data=[
             {
                 "user": {
-                    "name": resp[0],
-                    "id": resp[1],
+                    "id": r[0],
+                    "name": r[1]
                 },
                 "comment": {
-                    "id": resp[2],
-                    "created": resp[3],
-                    "updated": resp[4],
-                    "body": resp[5]
+                    "id": r[2],
+                    "created": r[3].strftime('%Y-%m-%d %H:%M:%S'),
+                    "updated": r[4].strftime('%Y-%m-%d %H:%M:%S'),
+                    "body": r[5]
                 }
             } for r in resp
         ]
@@ -720,7 +720,7 @@ def addArtComment(illustID):
             status=400,
             message="Request parameters are not satisfied."
         )
-    comment = g.validate(params['comment'], maxLength=500)
+    comment = g.validate(params['comment'], lengthMax=500)
     resp = g.db.edit(
         "INSERT INTO data_comment (userID, illustID, commentBody) VALUES (%s,%s,%s)",
         (g.userID, illustID, comment)
@@ -757,7 +757,7 @@ def editArtComment(illustID, commentID):
         (commentID, illustID)
     ):
         return jsonify(status=404, message="The comment was not found.")
-    comment = g.validate(params['comment'], maxLength=500)
+    comment = g.validate(params['comment'], lengthMax=500)
     resp = g.db.edit(
         "UPDATE data_comment SET "
         + "commentBody=%s, commentUpdated=CURRENT_TIMESTAMP() "
