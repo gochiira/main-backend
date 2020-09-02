@@ -83,6 +83,8 @@ def createArt():
         params["imageUrl"].startswith("https://twitter.com/"),
         params["imageUrl"].startswith("https://mobile.twitter.com/"),
         params["imageUrl"].startswith("https://www.pixiv.net/"),
+        params["imageUrl"].startswith("https://danbooru.donmai.us"),
+        params["imageUrl"].startswith("https://seiga.nicovideo.jp"),
         params["imageUrl"].startswith("https://api.gochiusa.team/static/temp/"),
         params["imageUrl"].startswith("http://192.168.0.3:5000/static/temp/")
     ]):
