@@ -664,6 +664,29 @@ def addArtLike(illustID):
         "SELECT illustLike FROM data_illust WHERE illustID = %s",
         (illustID,)
     )
+    # ランキングに追加
+    now = datetime.now()
+    resp = g.db.edit(
+        f"""INSERT INTO data_ranking (
+                rankingYear,
+                rankingMonth,
+                rankingDay,
+                rankingDayOfWeek,
+                illustID,
+                illustLike
+             ) VALUES (
+                {now.year},
+                {now.month},
+                {now.day},
+                {now.weekday()},
+                {illustID},
+                1
+            )
+            ON DUPLICATE KEY UPDATE
+                illustLike = illustLike + VALUES(illustLike)"""
+    )
+    if not resp:
+        return jsonify(status=500, message="Server bombed.")
     return jsonify(status=200, message="Update succeed.", likes=resp2[0][0])
 
 
@@ -692,8 +715,15 @@ def addArtView(illustID):
         return jsonify(status=500, message="Server bombed.")
     # 最終閲覧時刻を加算
     resp = g.db.edit(
-        "UPDATE data_view SET last_view = NOW()"
-        + f" WHERE userID={g.userID} AND illustID={illustID}"
+        f"""INSERT INTO data_view (
+            userID,illustID,last_view
+            ) VALUES (
+            {g.userID},
+            {illustID},
+            NOW()
+            )
+            ON DUPLICATE KEY UPDATE
+                last_view = NOW()"""
     )
     if not resp:
         return jsonify(status=500, message="Server bombed.")
@@ -706,7 +736,7 @@ def addArtView(illustID):
                 rankingDay,
                 rankingDayOfWeek,
                 illustID,
-                illustLike
+                illustView
              ) VALUES (
                 {now.year},
                 {now.month},
@@ -715,8 +745,8 @@ def addArtView(illustID):
                 {illustID},
                 1
             )
-            ON DEPLICATE KEY UPDATE
-                illustLike = illustLike + VALUES(illustLike)"""
+            ON DUPLICATE KEY UPDATE
+                illustView = illustView + VALUES(illustView)"""
     )
     if not resp:
         return jsonify(status=500, message="Server bombed.")
