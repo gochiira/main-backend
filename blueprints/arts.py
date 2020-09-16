@@ -139,6 +139,7 @@ def getArt(illustID):
             illustDate,
             illustPage,
             illustLike,
+            illustView,
             illustOriginUrl,
             illustOriginSite,
             illustNsfw,
@@ -168,7 +169,7 @@ def getArt(illustID):
     )
     if not len(artData):
         return jsonify(status=404, message="The art data was not found.")
-    if artData[0][15] == 2:
+    if artData[0][16] == 2:
         return jsonify(status=404, message="The art data was not found.")
     artData = artData[0]
     # タグ情報取得
@@ -200,25 +201,26 @@ def getArt(illustID):
         "date": artData[3].strftime('%Y-%m-%d %H:%M:%S'),
         "pages": artData[4],
         "like": artData[5],
+        "view": artData[6],
         "mylist": mylistCount,
         "mylisted": isMylisted,
-        "originUrl": artData[6],
-        "originService": artData[7],
-        "nsfw": artData[8],
-        "hash": artData[9],
-        "extension": artData[10],
+        "originUrl": artData[7],
+        "originService": artData[8],
+        "nsfw": artData[9],
+        "hash": artData[10],
+        "extension": artData[11],
         "artist": {
-            "id": artData[11],
-            "name": artData[12]
+            "id": artData[12],
+            "name": artData[13]
         },
         "user": {
-            "id": artData[13],
-            "name": artData[14]
+            "id": artData[14],
+            "name": artData[15]
         },
-        "status": artData[15],
-        "width": artData[16],
-        "height": artData[17],
-        "filesize": size(artData[18]),
+        "status": artData[16],
+        "width": artData[17],
+        "height": artData[18],
+        "filesize": size(artData[19]),
         "tag": tagData,
         "chara": charaData,
         "group": groupData,
@@ -231,6 +233,8 @@ def getArt(illustID):
 @apiLimiter.limit(handleApiPermission)
 def editArt(illustID):
     # TODO: 権限確認処理の欠如をどうにかする
+    if g.userPermission not in [0, 9]:
+        return jsonify(status=400, message='Bad request')
     params = request.get_json()
     if not params:
         return jsonify(status=400, message="Request parameters are not satisfied.")
@@ -646,17 +650,80 @@ def addArtCharacter(illustID):
 def addArtLike(illustID):
     if g.userPermission not in [0, 9]:
         return jsonify(status=400, message='Bad request')
+    # いいね数を加算
     resp = g.db.edit(
         "UPDATE data_illust SET illustLike = illustLike + 1 WHERE illustID = %s",
         (illustID,)
     )
     if not resp:
         return jsonify(status=500, message="Server bombed.")
+    # いいね数を取得
     resp2 = g.db.get(
         "SELECT illustLike FROM data_illust WHERE illustID = %s",
         (illustID,)
     )
     return jsonify(status=200, message="Update succeed.", likes=resp2[0][0])
+
+
+@arts_api.route(
+    '/<int:illustID>/view',
+    methods=["PUT"],
+    strict_slashes=False
+)
+@auth.login_required
+@apiLimiter.limit(handleApiPermission)
+def addArtView(illustID):
+    if g.userPermission not in [0, 9]:
+        return jsonify(status=400, message='Bad request')
+    # 最終閲覧時刻から1時間以上経過していなければエラー
+    if g.db.has(
+        "data_view",
+        f"userID={g.userID} AND illustID={illustID} AND last_view > (NOW() - INTERVAL 1 HOUR)"
+    ):
+        return jsonify(status=409, message="You can't add view for now")
+    # 閲覧数を加算
+    resp = g.db.edit(
+        "UPDATE data_illust SET illustView = illustView + 1"
+        + f" WHERE illustID={illustID}"
+    )
+    if not resp:
+        return jsonify(status=500, message="Server bombed.")
+    # 最終閲覧時刻を加算
+    resp = g.db.edit(
+        "UPDATE data_view SET last_view = NOW()"
+        + f" WHERE userID={g.userID} AND illustID={illustID}"
+    )
+    if not resp:
+        return jsonify(status=500, message="Server bombed.")
+    # ランキングに追加
+    now = datetime.now()
+    resp = g.db.edit(
+        f"""INSERT INTO data_ranking (
+                rankingYear,
+                rankingMonth,
+                rankingDay,
+                rankingDayOfWeek,
+                illustID,
+                illustLike
+             ) VALUES (
+                {now.year},
+                {now.month},
+                {now.day},
+                {now.weekday()},
+                {illustID},
+                1
+            )
+            ON DEPLICATE KEY UPDATE
+                illustLike = illustLike + VALUES(illustLike)"""
+    )
+    if not resp:
+        return jsonify(status=500, message="Server bombed.")
+    return jsonify(status=200, message="Update view succeed.")
+
+
+#
+# イラストのコメント関連
+#   無限にコメントできるものとする
 
 
 @arts_api.route('/<int:illustID>/comments', methods=["GET"], strict_slashes=False)
