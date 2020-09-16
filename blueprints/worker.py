@@ -4,6 +4,7 @@ from tempfile import TemporaryDirectory
 from urllib.parse import parse_qs as parse_query
 from .lib.danbooru_client import DanbooruGetter
 from .lib.seiga_client import SeigaGetter
+from .lib.booth_client import BoothGetter
 from .lib.pixiv_client import IllustGetter
 from .lib.twitter_client import TweetGetter
 from .lib.notify_client import NotifyClient
@@ -260,6 +261,12 @@ def processConvertRequest(params):
                 dg = DanbooruGetter()
                 img_addr = dg.getIllustSourceUrl(params["imageUrl"])
                 dg.downloadIllust(img_addr, fileOrigPath)
+            # Boothから取る場合
+            elif params["imageUrl"].startswith("https://booth.pm/ja/items/"):
+                bg = BoothGetter()
+                imgs = bg.getIllustSourceUrl(params["imageUrl"])
+                img_addr = imgs[page]
+                bg.downloadIllust(img_addr, fileOrigPath)
             # Pixivから取る場合
             elif params["imageUrl"].startswith("https://www.pixiv.net/"):
                 ig = IllustGetter()

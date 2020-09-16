@@ -6,6 +6,7 @@ from .recorder import recordApiRequest
 from .lib.pixiv_client import IllustGetter
 from .lib.twitter_client import TweetGetter
 from .lib.seiga_client import SeigaGetter
+from .lib.booth_client import BoothGetter
 from .lib.danbooru_client import DanbooruGetter
 from tempfile import TemporaryDirectory
 from base64 import b64encode
@@ -133,6 +134,27 @@ def getArtByDanbooru():
     if params['url'].find("?") != -1:
         params['url'] = params['url'][:params['url'].find("?")]
     resp = sg.getArt(params['url'])
+    if resp == {}:
+        return jsonify(status='400', message='bad request')
+    return jsonify(status='200', message='ok', data=resp)
+
+
+@scrape_api.route('/booth', methods=["POST"], strict_slashes=False)
+@auth.login_required
+@apiLimiter.limit(handleApiPermission)
+def getArtByBooth():
+    if g.userPermission not in [0, 9]:
+        return jsonify(status=400, message='Bad request')
+    params = request.get_json()
+    if not params:
+        return jsonify(status='400', message='bad request')
+    if 'url' not in params.keys():
+        return jsonify(status='400', message='bad request')
+    bg = BoothGetter()
+    # 雑なエラー対応
+    if params['url'].find("?") != -1:
+        params['url'] = params['url'][:params['url'].find("?")]
+    resp = bg.getProduct(params['url'])
     if resp == {}:
         return jsonify(status='400', message='bad request')
     return jsonify(status='200', message='ok', data=resp)
