@@ -99,13 +99,14 @@ def createArt():
         params.get("originService", "不明"), lengthMax=20)
     params["userID"] = g.userID
     # Workerにパラメータを投げる
-    q = Queue(
-        connection=Redis(host="192.168.0.10", port=6379, db=0),
-        job_timeout=120,
-        description=f'sUploadedImageConverter (Issued by User{g.userID})'
-    )
-    q.enqueue(processConvertRequest, params)
-    recordApiRequest(g.userID, "addArt", param1=-1)
+    if not current_app.debug:
+        q = Queue(
+            connection=Redis(host="192.168.0.10", port=6379, db=0),
+            job_timeout=120,
+            description=f'sUploadedImageConverter (Issued by User{g.userID})'
+        )
+        q.enqueue(processConvertRequest, params)
+        recordApiRequest(g.userID, "addArt", param1=-1)
     return jsonify(status=202, message="Accepted")
 
 
