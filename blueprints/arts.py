@@ -196,6 +196,23 @@ def getArt(illustID):
         "mylistID IN (SELECT mylistID FROM info_mylist WHERE userID=%s) AND illustID = %s",
         (g.userID, illustID)
     )
+    replacedData = g.db.get(
+        """SELECT
+            illustID, illustName, illustDescription,
+            illustDate, illustOriginSite, illustOriginUrl,
+            illustWidth, illustHeight, illustBytes
+        FROM
+            data_illust
+        WHERE
+            illustID IN(
+            SELECT
+                illustLowerID
+            FROM
+                data_replace
+            WHERE
+                illustGreaterID=%s) """,
+        (illustID,)
+    )
     return jsonify(status=200, data={
         "illustID": artData[0],
         "title": artData[1],
@@ -226,7 +243,18 @@ def getArt(illustID):
         "tag": tagData,
         "chara": charaData,
         "group": groupData,
-        "system": systemData
+        "system": systemData,
+        "replace": [{
+            "illustID": r[0],
+            "title": r[1],
+            "caption": r[2],
+            "date": r[3].strftime('%Y-%m-%d %H:%M:%S'),
+            "originService": r[4],
+            "originUrl": r[5],
+            "width": r[6],
+            "height": r[7],
+            "filesize": r[8]
+        } for r in replacedData]
     })
 
 
