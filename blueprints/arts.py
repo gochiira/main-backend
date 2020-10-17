@@ -13,6 +13,7 @@ import tempfile
 import json
 import shutil
 import traceback
+import requests
 
 arts_api = Blueprint('arts_api', __name__)
 
@@ -681,12 +682,10 @@ def addArtLike(illustID):
     if g.userPermission not in [0, 9]:
         return jsonify(status=400, message='Bad request')
     # いいね数を加算
-    resp = g.db.edit(
+    g.db.edit(
         "UPDATE data_illust SET illustLike = illustLike + 1 WHERE illustID = %s",
         (illustID,)
     )
-    if not resp:
-        return jsonify(status=500, message="Server bombed.")
     # いいね数を取得
     resp2 = g.db.get(
         "SELECT illustLike FROM data_illust WHERE illustID = %s",
@@ -709,6 +708,87 @@ def addArtLike(illustID):
                 {now.weekday()},
                 {illustID},
                 1
+            )
+            ON DUPLICATE KEY UPDATE
+                illustLike = illustLike + VALUES(illustLike)"""
+    )
+    if not resp:
+        return jsonify(status=500, message="Server bombed.")
+    return jsonify(status=200, message="Update succeed.", likes=resp2[0][0])
+
+
+@arts_api.route(
+    '/<int:illustID>/likes/<int:likeType>',
+    methods=["PUT"],
+    strict_slashes=False
+)
+@auth.login_required
+@apiLimiter.limit(handleApiPermission)
+def addArtLikeWithType(illustID, likeType):
+    if g.userPermission not in [0, 9]:
+        return jsonify(status=400, message='Bad request')
+    # イエロー/グリーン/レッド/ブルー
+    # リクエストIDからいいね数変換
+    likeDatas = {
+        0: {"count": 1, "product_id": -1, "column": "illustStarYellow"},
+        1: {"count": 10, "product_id": 18, "column": "illustStarGreen"},
+        2: {"count": 20, "product_id": 19, "column": "illustStarRed"},
+        3: {"count": 50, "product_id": 20, "column": "illustStarBlue"}
+    }
+    if likeType not in likeDatas.keys():
+        return jsonify(status=400, message='Bad likeType')
+    likeData = likeDatas[likeType]
+    # ユーザーのカラースターを消費する
+    if likeData["product_id"] != -1:
+        toyApiKey = g.db.get(
+            "SELECT userToyApiKey FROM data_user WHERE userID=%s",
+            (g.userID,)
+        )[0][0]
+        resp = requests.post(
+            "http://localhost:7070/users/assets/use",
+            json={"id": likeData["product_id"], "amount": 1},
+            headers={
+                "Authorization": f"Bearer {toyApiKey}"
+            }
+        ).json()
+        if resp.status_code == 406:
+            return jsonify(
+                status=406,
+                message="You need more power stars to open door."
+            )
+    # いいね数を加算
+    g.db.edit(
+        "UPDATE data_illust SET illustLike = illustLike + %s WHERE illustID = %s",
+        (likeData["count"], illustID)
+    )
+    # スター数を加算
+    g.db.edit(
+        f"""UPDATE data_illust SET
+        {likeData['column']} = {likeData['column']} + 1 WHERE illustID = %s""",
+        (illustID,)
+    )
+    # いいね数を取得
+    resp2 = g.db.get(
+        "SELECT illustLike FROM data_illust WHERE illustID = %s",
+        (illustID,)
+    )
+    # ランキングに追加
+    now = datetime.now()
+    resp = g.db.edit(
+        f"""INSERT INTO data_ranking (
+                rankingYear,
+                rankingMonth,
+                rankingDay,
+                rankingDayOfWeek,
+                illustID,
+                illustLike
+             ) VALUES (
+                {now.year},
+                {now.month},
+                {now.day},
+                {now.weekday()},
+                {illustID},
+                {likeData['count']}
             )
             ON DUPLICATE KEY UPDATE
                 illustLike = illustLike + VALUES(illustLike)"""
