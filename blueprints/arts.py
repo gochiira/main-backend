@@ -155,7 +155,11 @@ def getArt(illustID):
             illustStatus,
             illustWidth,
             illustHeight,
-            illustBytes
+            illustBytes,
+            illustStarYellow,
+            illustStarGreen,
+            illustStarRed,
+            illustStarBlue
         FROM
             data_illust
         INNER JOIN
@@ -255,7 +259,13 @@ def getArt(illustID):
             "width": r[6],
             "height": r[7],
             "filesize": r[8]
-        } for r in replacedData]
+        } for r in replacedData],
+        "star": {
+            "yellow": artData[20],
+            "green": artData[21],
+            "red": artData[22],
+            "blue": artData[23]
+        }
     })
 
 
@@ -406,7 +416,11 @@ def replaceArt(illustLowerID):
                     illustStatus,
                     illustWidth,
                     illustHeight,
-                    illustBytes
+                    illustBytes,
+                    illustStarYellow,
+                    illustStarGreen,
+                    illustStarRed,
+                    illustStarBlue
                 FROM
                     data_illust
                 INNER JOIN
@@ -447,7 +461,13 @@ def replaceArt(illustLowerID):
                 "status": artData[15],
                 "width": artData[16],
                 "height": artData[17],
-                "filesize": size(artData[18])
+                "filesize": size(artData[18]),
+                "star": {
+                    "yellow": artData[19],
+                    "green": artData[20],
+                    "red": artData[21],
+                    "blue": artData[22]
+                }
             }
         return jsonify(status=200, message="ok", data=resp)
     # 実際に処理する
@@ -750,11 +770,11 @@ def addArtLikeWithType(illustID, likeType):
             headers={
                 "Authorization": f"Bearer {toyApiKey}"
             }
-        ).json()
+        )
         if resp.status_code == 406:
             return jsonify(
                 status=406,
-                message="You need more power stars to open door."
+                message="You need more power stars to open this door."
             )
     # いいね数を加算
     g.db.edit(
