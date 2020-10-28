@@ -1,6 +1,5 @@
-from flask import Blueprint, g, request, jsonify, escape, current_app
-from flask_httpauth import HTTPTokenAuth
-from .authorizator import auth, token_serializer
+from flask import Blueprint, g, request, jsonify, current_app
+from .authorizator import auth
 from .limiter import apiLimiter, handleApiPermission
 from .recorder import recordApiRequest
 from .lib.pixiv_client import IllustGetter

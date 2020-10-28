@@ -30,8 +30,6 @@ def createArt():
     if g.userPermission not in [0, 9]:
         return jsonify(status=400, message='Bad request')
     '''
-    画像複数対応は面倒くさいのでとりあえずなしにしましょう
-
     REQ
     {
         "title":"Test",
@@ -57,20 +55,12 @@ def createArt():
     # パラメータ確認
     requiredParams = set(("title", "originService"))
     validParams = [
-        "title",
-        "caption",
-        "imageUrl",
-        "originUrl",
-        "originService",
-        "artist",
-        "tag",
-        "chara",
-        "system",
-        "group",
-        "nsfw"
+        "title", "caption", "imageUrl",
+        "originUrl", "originService",
+        "artist", "tag", "chara",
+        "system", "group", "nsfw"
     ]
     # 必須パラメータ確認
-    # print(params.items())
     params = {p: params[p] for p in params.keys() if p in validParams}
     if not requiredParams.issubset(params.keys()):
         return jsonify(status=400, message='bad request: not enough')
