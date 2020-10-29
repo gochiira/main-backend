@@ -250,12 +250,12 @@ def getArt(illustID):
             "height": r[7],
             "filesize": r[8]
         } for r in replacedData],
-        "star": {
-            "yellow": artData[20],
-            "green": artData[21],
-            "red": artData[22],
-            "blue": artData[23]
-        }
+        "star": [
+            artData[20],
+            artData[21],
+            artData[22],
+            artData[23]
+        ]
     })
 
 
@@ -452,12 +452,12 @@ def replaceArt(illustLowerID):
                 "width": artData[16],
                 "height": artData[17],
                 "filesize": size(artData[18]),
-                "star": {
-                    "yellow": artData[19],
-                    "green": artData[20],
-                    "red": artData[21],
-                    "blue": artData[22]
-                }
+                "star": [
+                    artData[19],
+                    artData[20],
+                    artData[21],
+                    artData[22]
+                ]
             }
         return jsonify(status=200, message="ok", data=resp)
     # 実際に処理する
