@@ -1,3 +1,4 @@
+import quart.flask_patch
 from .accounts import accounts_api
 from .artists import artists_api
 from .arts import arts_api

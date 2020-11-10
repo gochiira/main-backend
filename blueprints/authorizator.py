@@ -1,4 +1,5 @@
-from flask import g
+import quart.flask_patch
+from quart import g
 from flask_httpauth import HTTPTokenAuth
 from itsdangerous import JSONWebSignatureSerializer as Serializer
 
@@ -38,6 +39,7 @@ def permission_required(
             return jsonify(status=400, message="You don't have enough permissions.")
     return check_permission
 '''
+
 
 @auth.verify_token
 def verify_token(token):

@@ -1,4 +1,4 @@
-from flask import Blueprint, g, request, jsonify, escape, current_app
+from quart import Blueprint, g, request, jsonify, escape, current_app
 from .authorizator import auth, token_serializer
 from .limiter import apiLimiter, handleApiPermission
 from .recorder import recordApiRequest
@@ -170,7 +170,7 @@ search_api = Blueprint('search_api', __name__)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
 @apiCache.cached(timeout=7, query_string=True)
-def searchByTag():
+async def searchByTag():
     tagID = request.args.get('id', default=None, type=int)
     if not tagID:
         return jsonify(status=400, message="tagID is required.")
@@ -189,7 +189,7 @@ def searchByTag():
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
 @apiCache.cached(timeout=7, query_string=True)
-def searchByArtist():
+async def searchByArtist():
     artistID = request.args.get('id', default=None, type=int)
     if not artistID:
         return jsonify(status=400, message="artistID is required.")
@@ -207,7 +207,7 @@ def searchByArtist():
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
 @apiCache.cached(timeout=7, query_string=True)
-def searchByUploader():
+async def searchByUploader():
     uploaderID = request.args.get('id', default=None, type=int)
     if not uploaderID:
         return jsonify(status=400, message="uploaderID is required.")
@@ -225,7 +225,7 @@ def searchByUploader():
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
 @apiCache.cached(timeout=7, query_string=True)
-def searchByCharacter():
+async def searchByCharacter():
     charaID = request.args.get('id', default=None, type=int)
     if not charaID:
         return jsonify(status=400, message="charaID is required.")
@@ -244,7 +244,7 @@ def searchByCharacter():
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
 @apiCache.cached(timeout=7, query_string=True)
-def searchByKeyword():
+async def searchByKeyword():
     keyword = request.args.get("keyword", default=None, type=str)
     if not keyword:
         return jsonify(status=400, message="keyword is required.")
@@ -256,7 +256,7 @@ def searchByKeyword():
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
 @apiCache.cached(timeout=7, query_string=True)
-def searchByAll():
+async def searchByAll():
     whereSql = "1 = 1"
     return getSearch(whereSql, "全て")
 
@@ -264,7 +264,7 @@ def searchByAll():
 @search_api.route('/random', methods=["GET"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def searchByRandom():
+async def searchByRandom():
     '''
     REQ
         nsfw= 1/0
@@ -359,7 +359,7 @@ def searchByRandom():
 @search_api.route('/image/saucenao', methods=["POST"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def searchByImageAtSauceNao():
+async def searchByImageAtSauceNao():
     if g.userPermission not in [0, 9]:
         return jsonify(status=400, message="Bad request")
     if "file" not in request.files:
@@ -394,7 +394,7 @@ def searchByImageAtSauceNao():
 @search_api.route('/image/ascii2d', methods=["POST"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def searchByImageAtAscii2d():
+async def searchByImageAtAscii2d():
     if g.userPermission not in [0, 9]:
         return jsonify(status=400, message="Bad request")
     if "file" not in request.files:
@@ -432,7 +432,7 @@ def searchByImageAtAscii2d():
 @search_api.route('/image', methods=["POST"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def searchByImage():
+async def searchByImage():
     if g.userPermission not in [0, 9]:
         return jsonify(status=400, message="Bad request")
     if "file" not in request.files:
@@ -527,7 +527,7 @@ def searchByImage():
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
 @apiCache.cached(timeout=7, query_string=True)
-def searchByMultipleTag():
+async def searchByMultipleTag():
     # パラメータの確認
     tagID = request.args.get('id', default=None, type=str)
     if not tagID:

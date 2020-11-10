@@ -1,4 +1,4 @@
-from flask import Blueprint, g, request, jsonify, escape
+from quart import Blueprint, g, request, jsonify, escape
 from .authorizator import auth, token_serializer
 from .limiter import apiLimiter, handleApiPermission
 from .recorder import recordApiRequest
@@ -13,10 +13,10 @@ tags_api = Blueprint('tags_api', __name__)
 @tags_api.route('/', methods=["POST"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def addTag():
+async def addTag():
     if g.userPermission not in [0, 9]:
         return jsonify(status=400, message='Bad request')
-    params = request.get_json()
+    params = await request.get_json()
     if not params:
         return jsonify(status=400, message="Request parameters are not satisfied.")
     if "tagName" not in params.keys():
@@ -56,7 +56,7 @@ def addTag():
 @tags_api.route('/<int:tagID>/', methods=["DELETE"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def removeTag(tagID):
+async def removeTag(tagID):
     if g.userPermission not in [0, 9]:
         return jsonify(status=400, message='Bad request')
     if not g.db.has("info_tag", "tagID=%s", (tagID,)):
@@ -76,7 +76,7 @@ def removeTag(tagID):
 @tags_api.route('/<int:tagID>/', methods=["GET"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def getTag(tagID):
+async def getTag(tagID):
     tagData = g.db.get(
         "SELECT * FROM info_tag WHERE tagID = %s", (tagID,)
     )
@@ -96,10 +96,10 @@ def getTag(tagID):
 @tags_api.route('/<int:tagID>/', methods=["PUT"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def editTag(tagID):
+async def editTag(tagID):
     if g.userPermission not in [0, 9]:
         return jsonify(status=400, message='Bad request')
-    params = request.get_json()
+    params = await request.get_json()
     if not params:
         return jsonify(status=400, message="Request parameters are not satisfied.")
     validParams = {
@@ -135,7 +135,7 @@ def editTag(tagID):
 @tags_api.route('/finds', methods=["GET"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def getTagListByKeyword():
+async def getTagListByKeyword():
     keyword = request.args.get('keyword', default=None, type=str)
     resp = g.db.get(
         "SELECT tagID,tagName FROM info_tag "

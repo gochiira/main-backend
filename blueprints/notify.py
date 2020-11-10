@@ -1,4 +1,4 @@
-from flask import Flask, g, request, jsonify, Blueprint, current_app
+from quart import g, request, jsonify, Blueprint, current_app
 from .authorizator import auth
 from .limiter import apiLimiter, handleApiPermission
 from .recorder import recordApiRequest
@@ -10,7 +10,7 @@ notify_api = Blueprint('notify_api', __name__)
 @notify_api.route('/setting/line', methods=["POST"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def initLineNotify():
+async def initLineNotify():
     """
     LINE Notifyを使う
     """
@@ -20,18 +20,18 @@ def initLineNotify():
 @notify_api.route('/setting/twitter', methods=["POST"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def initTwitterNotify():
+async def initTwitterNotify():
     return jsonify(status=503, message="Not implemented.")
 
 
 @notify_api.route('/setting/onesignal', methods=["POST"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def initOneSignalNotify():
+async def initOneSignalNotify():
     """
     サイト内で取得した OneSignalのPlayerIDをPOSTで送ってくる。
     """
-    params = request.get_json()
+    params = await request.get_json()
     if not params:
         return jsonify(status=400, message="Request parameters are not satisfied.")
     if "id" not in params.keys():
@@ -61,7 +61,7 @@ def initOneSignalNotify():
 @notify_api.route('/setting/onesignal', methods=["DELETE"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def resetOneSignalNotify():
+async def resetOneSignalNotify():
     resp = g.db.edit(
         "UPDATE data_user SET userOneSignalID=NULL WHERE userID=%s",
         (g.userID,)
@@ -75,8 +75,8 @@ def resetOneSignalNotify():
 @notify_api.route('/register', methods=["POST"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def addNotify():
-    params = request.get_json()
+async def addNotify():
+    params = await request.get_json()
     if not params:
         return jsonify(status=400, message="Request parameters are not satisfied.")
     if "type" not in params.keys()\
@@ -121,8 +121,8 @@ def addNotify():
 @notify_api.route('/unregister', methods=["POST"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def deleteNotify():
-    params = request.get_json()
+async def deleteNotify():
+    params = await request.get_json()
     if not params:
         return jsonify(status=400, message="Request parameters are not satisfied.")
     if "type" not in params.keys()\
@@ -161,7 +161,7 @@ def deleteNotify():
 @notify_api.route('/find', methods=["GET"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def findNotify():
+async def findNotify():
     '''方法も指定して通知が設定されているか確認'''
     targetType = request.args.get('type', default=None, type=int)
     targetID = request.args.get('id', default=None, type=int)
@@ -189,7 +189,7 @@ def findNotify():
 @notify_api.route('/finds', methods=["GET"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def findsNotify():
+async def findsNotify():
     '''通知が設定されているか確認'''
     targetType = request.args.get('type', default=None, type=int)
     targetID = request.args.get('id', default=None, type=int)
@@ -221,7 +221,7 @@ def findsNotify():
 @notify_api.route('/list', methods=["GET"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def listNotify():
+async def listNotify():
     pageID = request.args.get('page', default=1, type=int)
     per_page = request.args.get('count', default=50, type=int)
     if per_page > 100:
@@ -265,7 +265,7 @@ def listNotify():
 @notify_api.route('/<int:notifyID>', methods=["GET"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def getNotify(notifyID):
+async def getNotify(notifyID):
     resp = g.db.get(
         "SELECT * FROM data_notify WHERE notifyID=%s",
         (notifyID,)

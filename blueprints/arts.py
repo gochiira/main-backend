@@ -1,4 +1,4 @@
-from flask import Blueprint, g, request, jsonify, escape, current_app
+from quart import Blueprint, g, request, jsonify, escape, current_app
 from .authorizator import auth, token_serializer
 from .limiter import apiLimiter, handleApiPermission
 from .recorder import recordApiRequest
@@ -26,7 +26,7 @@ arts_api = Blueprint('arts_api', __name__)
 @arts_api.route('/', methods=["POST"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def createArt():
+async def createArt():
     if g.userPermission not in [0, 9]:
         return jsonify(status=400, message='Bad request')
     '''
@@ -49,7 +49,7 @@ def createArt():
     }
     '''
     # 最低限のパラメータ確認
-    params = request.get_json()
+    params = await request.get_json()
     if not params:
         return jsonify(status=400, message='bad request: not json')
     # パラメータ確認
@@ -104,7 +104,7 @@ def createArt():
 @arts_api.route('/<int:illustID>', methods=["DELETE"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def destroyArt(illustID):
+async def destroyArt(illustID):
     if g.userPermission not in [0, 9]:
         return jsonify(status=400, message='Bad request')
     # TODO: 管理ユーザー: ファイルから削除する
@@ -122,7 +122,7 @@ def destroyArt(illustID):
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
 @apiCache.cached(timeout=5)
-def getArt(illustID):
+async def getArt(illustID):
     # TODO: 置き換え情報の取得と応答
     artData = g.db.get(
         """SELECT
@@ -262,11 +262,11 @@ def getArt(illustID):
 @arts_api.route('/<int:illustID>', methods=["PUT"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def editArt(illustID):
+async def editArt(illustID):
     # TODO: 権限確認処理の欠如をどうにかする
     if g.userPermission not in [0, 9]:
         return jsonify(status=400, message='Bad request')
-    params = request.get_json()
+    params = await request.get_json()
     if not params:
         return jsonify(status=400, message="Request parameters are not satisfied.")
     # まず一旦タグを全部破壊
@@ -371,10 +371,10 @@ def editArt(illustID):
 @arts_api.route('/<int:illustLowerID>/replace', methods=["PUT"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def replaceArt(illustLowerID):
+async def replaceArt(illustLowerID):
     if g.userPermission not in [0, 9]:
         return jsonify(status=400, message='Bad request')
-    params = request.get_json()
+    params = await request.get_json()
     if not params:
         return jsonify(status=400, message="Request parameters are not satisfied.")
     if "status" not in params or "illustID" not in params:
@@ -516,10 +516,10 @@ def replaceArt(illustLowerID):
 @arts_api.route('/<int:illustID>/tags', methods=["DELETE"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def deleteArtTag(illustID):
+async def deleteArtTag(illustID):
     if g.userPermission not in [0, 9]:
         return jsonify(status=400, message='Bad request')
-    params = request.get_json()
+    params = await request.get_json()
     if not params:
         return jsonify(status=400, message="Request parameters are not satisfied.")
     try:
@@ -543,7 +543,7 @@ def deleteArtTag(illustID):
 @arts_api.route('/<int:illustID>/tags', methods=["GET"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def getArtTag(illustID):
+async def getArtTag(illustID):
     '''指定されたイラスト付属のタグ一覧を、フルデータとして取得する'''
     resp = g.db.get(
         "SELECT * FROM info_tag "
@@ -567,10 +567,10 @@ def getArtTag(illustID):
 @arts_api.route('/<int:illustID>/tags', methods=["PUT"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def addArtTag(illustID):
+async def addArtTag(illustID):
     if g.userPermission not in [0, 9]:
         return jsonify(status=400, message='Bad request')
-    params = request.get_json()
+    params = await request.get_json()
     if not params:
         return jsonify(status=400, message="Request parameters are not satisfied.")
     try:
@@ -601,10 +601,10 @@ def addArtTag(illustID):
 @arts_api.route('/<int:illustID>/characters', methods=["DELETE"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def deleteArtCharacter(illustID):
+async def deleteArtCharacter(illustID):
     if g.userPermission not in [0, 9]:
         return jsonify(status=400, message='Bad request')
-    params = request.get_json()
+    params = await request.get_json()
     if not params:
         return jsonify(status=400, message="Request parameters are not satisfied.")
     try:
@@ -628,7 +628,7 @@ def deleteArtCharacter(illustID):
 @arts_api.route('/<int:illustID>/characters', methods=["GET"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def getArtCharacter(illustID):
+async def getArtCharacter(illustID):
     if g.userPermission not in [0, 9]:
         return jsonify(status=400, message='Bad request')
     '''指定されたイラスト付属のキャラ一覧を、フルデータとして取得する'''
@@ -654,10 +654,10 @@ def getArtCharacter(illustID):
 @arts_api.route('/<int:illustID>/characters', methods=["PUT"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def addArtCharacter(illustID):
+async def addArtCharacter(illustID):
     if g.userPermission not in [0, 9]:
         return jsonify(status=400, message='Bad request')
-    params = request.get_json()
+    params = await request.get_json()
     if not params:
         return jsonify(status=400, message="Request parameters are not satisfied.")
     try:
@@ -688,7 +688,7 @@ def addArtCharacter(illustID):
 @arts_api.route('/<int:illustID>/likes', methods=["PUT"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def addArtLike(illustID):
+async def addArtLike(illustID):
     if g.userPermission not in [0, 9]:
         return jsonify(status=400, message='Bad request')
     # いいね数を加算
@@ -734,7 +734,7 @@ def addArtLike(illustID):
 )
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def addArtLikeWithType(illustID, likeType):
+async def addArtLikeWithType(illustID, likeType):
     if g.userPermission not in [0, 9]:
         return jsonify(status=400, message='Bad request')
     # イエロー/グリーン/レッド/ブルー
@@ -815,7 +815,7 @@ def addArtLikeWithType(illustID, likeType):
 )
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def addArtView(illustID):
+async def addArtView(illustID):
     if g.userPermission not in [0, 9]:
         return jsonify(status=400, message='Bad request')
     # 最終閲覧時刻から1時間以上経過していなければエラー
@@ -879,7 +879,7 @@ def addArtView(illustID):
 @arts_api.route('/<int:illustID>/comments', methods=["GET"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def getArtComments(illustID):
+async def getArtComments(illustID):
     per_page = 10
     pageID = request.args.get('page', default=1, type=int)
     if pageID < 1:
@@ -925,10 +925,10 @@ def getArtComments(illustID):
 )
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def addArtComment(illustID):
+async def addArtComment(illustID):
     if g.userPermission not in [0, 9]:
         return jsonify(status=400, message='Bad request')
-    params = request.get_json()
+    params = await request.get_json()
     if not params:
         return jsonify(
             status=400,
@@ -956,10 +956,10 @@ def addArtComment(illustID):
 )
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def editArtComment(illustID, commentID):
+async def editArtComment(illustID, commentID):
     if g.userPermission not in [9]:
         return jsonify(status=400, message='Bad request')
-    params = request.get_json()
+    params = await request.get_json()
     if not params:
         return jsonify(
             status=400,
@@ -995,7 +995,7 @@ def editArtComment(illustID, commentID):
 )
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def deleteArtComment(illustID, commentID):
+async def deleteArtComment(illustID, commentID):
     if g.userPermission not in [9]:
         return jsonify(status=400, message='Bad request')
     if not g.db.has(

@@ -1,5 +1,6 @@
-from flask import Flask
-from flask_cors import CORS
+import quart.flask_patch
+from quart import Quart
+from quart_cors import cors
 from general import (
     app_before_request,
     app_after_request,
@@ -99,7 +100,7 @@ POST /user/ID
 
 
 def createApp():
-    app = Flask(__name__)
+    app = Quart(__name__)
     # 設定
     app.config['JSON_AS_ASCII'] = False
     app.config['JSON_SORT_KEYS'] = False
@@ -151,10 +152,10 @@ def createApp():
     # Flask-Cacheの登録
     apiCache.init_app(app)
     # Flask-CORSの登録 (CORSは7日間キャッシュする)
-    CORS(
+    cors(
         app,
-        methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        origins=[
+        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        allow_origin=[
             "http://localhost:3000",
             "https://random.gochiusa.team",
             "https://illust.gochiusa.team"

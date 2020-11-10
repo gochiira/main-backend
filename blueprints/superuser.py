@@ -1,4 +1,4 @@
-from flask import Flask, g, request, jsonify, Blueprint
+from quart import g, request, jsonify, Blueprint
 from .authorizator import auth, token_serializer
 from .limiter import apiLimiter, handleApiPermission
 from .recorder import recordApiRequest
@@ -8,7 +8,7 @@ superuser_api = Blueprint('superuser_api', __name__)
 
 
 @superuser_api.route('/gc', methods=["GET"], strict_slashes=False)
-def garbageCollect():
+async def garbageCollect():
     '''
     作品のない作者 や 作品のないタグ、 登録されていないタグの情報 などを削除する
     '''

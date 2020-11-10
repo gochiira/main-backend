@@ -1,4 +1,4 @@
-from flask import Flask, g, request, jsonify, escape, Blueprint
+from quart import g, request, jsonify, escape, Blueprint
 from .authorizator import auth, token_serializer
 from .limiter import apiLimiter, handleApiPermission
 from .recorder import recordApiRequest
@@ -10,10 +10,10 @@ news_api = Blueprint('news_api', __name__)
 @news_api.route('/', methods=["POST"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def addNews(newsID):
+async def addNews(newsID):
     if g.userPermission != 9:
         return jsonify(status=400, message="Bad request")
-    params = request.get_json()
+    params = await request.get_json()
     if not params:
         return jsonify(status=400, message="Request parameters are not satisfied.")
     if "color" not in params.keys()\
@@ -43,7 +43,7 @@ def addNews(newsID):
 @news_api.route('/<int:newsID>', methods=["DELETE"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def deleteNews(newsID):
+async def deleteNews(newsID):
     if g.userPermission != 9:
         return jsonify(status=401, message="You don't have permission")
     resp = g.db.edit(
@@ -61,7 +61,7 @@ def deleteNews(newsID):
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
 @apiCache.cached(timeout=1800, query_string=True)
-def listNews():
+async def listNews():
     maxNews = request.args.get('count', default=50, type=int)
     datas = g.db.get(
         "SELECT * FROM data_news ORDER BY newsID DESC LIMIT %s", (maxNews,))
@@ -74,7 +74,7 @@ def listNews():
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
 @apiCache.cached(timeout=1800)
-def getNews(newsID):
+async def getNews(newsID):
     resp = g.db.get(
         "SELECT * FROM data_news WHERE newsID=%s",
         (newsID,)

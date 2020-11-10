@@ -1,4 +1,4 @@
-from flask import g, jsonify, current_app
+from quart import g, jsonify, current_app
 from db import SQLHandler
 import html
 

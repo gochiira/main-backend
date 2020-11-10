@@ -1,4 +1,4 @@
-from flask import Blueprint, g, request, jsonify, current_app
+from quart import Blueprint, g, request, jsonify, current_app
 from .authorizator import auth
 from .limiter import apiLimiter, handleApiPermission
 from .recorder import recordApiRequest
@@ -49,10 +49,10 @@ scrape_api = Blueprint('scrape_api', __name__)
 @scrape_api.route('/twitter', methods=["POST"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def getArtByTwitter():
+async def getArtByTwitter():
     if g.userPermission not in [0, 9]:
         return jsonify(status=400, message='Bad request')
-    params = request.get_json()
+    params = await request.get_json()
     if not params:
         return jsonify(status='400', message='bad request')
     if 'url' not in params.keys():
@@ -71,10 +71,10 @@ def getArtByTwitter():
 @scrape_api.route('/pixiv', methods=["POST"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def getArtByPixiv():
+async def getArtByPixiv():
     if g.userPermission not in [0, 9]:
         return jsonify(status=400, message='Bad request')
-    params = request.get_json()
+    params = await request.get_json()
     if not params:
         return jsonify(status='400', message='bad request')
     if 'url' not in params.keys():
@@ -99,10 +99,10 @@ def getArtByPixiv():
 @scrape_api.route('/seiga', methods=["POST"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def getArtByNicoNicoSeiga():
+async def getArtByNicoNicoSeiga():
     if g.userPermission not in [0, 9]:
         return jsonify(status=400, message='Bad request')
-    params = request.get_json()
+    params = await request.get_json()
     if not params:
         return jsonify(status='400', message='bad request')
     if 'url' not in params.keys():
@@ -120,10 +120,10 @@ def getArtByNicoNicoSeiga():
 @scrape_api.route('/danbooru', methods=["POST"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def getArtByDanbooru():
+async def getArtByDanbooru():
     if g.userPermission not in [0, 9]:
         return jsonify(status=400, message='Bad request')
-    params = request.get_json()
+    params = await request.get_json()
     if not params:
         return jsonify(status='400', message='bad request')
     if 'url' not in params.keys():
@@ -141,10 +141,10 @@ def getArtByDanbooru():
 @scrape_api.route('/booth', methods=["POST"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def getArtByBooth():
+async def getArtByBooth():
     if g.userPermission not in [0, 9]:
         return jsonify(status=400, message='Bad request')
-    params = request.get_json()
+    params = await request.get_json()
     if not params:
         return jsonify(status='400', message='bad request')
     if 'url' not in params.keys():
@@ -162,7 +162,7 @@ def getArtByBooth():
 @scrape_api.route('/self', methods=["POST"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def getArtBySelf():
+async def getArtBySelf():
     if g.userPermission not in [0, 9]:
         return jsonify(status=400, message='Bad request')
     # これだけアップロードか何か、エンドポイント変えたほうがいいような気がする...
@@ -199,5 +199,5 @@ def getArtBySelf():
 @scrape_api.route('/predict_tag', methods=["GET"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def predictTag():
+async def predictTag():
     return "Not implemeted"

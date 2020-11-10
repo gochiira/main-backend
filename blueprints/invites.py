@@ -1,4 +1,4 @@
-from flask import Blueprint, g, request, jsonify, escape
+from quart import Blueprint, g, request, jsonify, escape
 from .authorizator import auth, token_serializer
 from .limiter import apiLimiter, handleApiPermission
 from .recorder import recordApiRequest
@@ -11,7 +11,7 @@ invites_api = Blueprint('invites_api', __name__)
 @invites_api.route('/', methods=["GET"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def createInvite():
+async def createInvite():
     if g.userPermission not in [0, 9]:
         return jsonify(status=400, message="Bad request")
     if g.db.has(
@@ -39,7 +39,7 @@ def createInvite():
 @invites_api.route('/<int:inviteID>', methods=["DELETE"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def deleteInvite(inviteID):
+async def deleteInvite(inviteID):
     if g.userPermission != 9:
         resp = g.db.edit(
             "DELETE FROM data_invite WHERE inviter=%s AND inviteID=%s",
@@ -58,7 +58,7 @@ def deleteInvite(inviteID):
 @invites_api.route('/<int:invitesID>', methods=["GET"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def getInvite(invitesID):
+async def getInvite(invitesID):
     if g.userPermission != 9:
         return jsonify(status=401, message="not allowed")
     return "Not implemeted"
@@ -67,7 +67,7 @@ def getInvite(invitesID):
 @invites_api.route('/list', methods=["GET"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def listInvite(invitesID):
+async def listInvite(invitesID):
     if g.userPermission != 9:
         return jsonify(status=401, message="not allowed")
     return "Not implemeted"

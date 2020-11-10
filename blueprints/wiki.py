@@ -1,4 +1,4 @@
-from flask import Blueprint, request, g, jsonify
+from quart import Blueprint, request, g, jsonify
 from .authorizator import auth, token_serializer
 from .limiter import apiLimiter, handleApiPermission
 from .recorder import recordApiRequest
@@ -13,8 +13,8 @@ wiki_api = Blueprint('wiki_api', __name__)
 @wiki_api.route('/', methods=["POST"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def addArticle():
-    params = request.get_json()
+async def addArticle():
+    params = await request.get_json()
     if not params:
         return jsonify(
             status=400,
@@ -84,7 +84,7 @@ def addArticle():
 @wiki_api.route('/<int:articleID>', methods=["DELETE"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def removeArticle(articleID):
+async def removeArticle(articleID):
     if not g.db.has("data_wiki", "articleID=%s", (articleID,)):
         return jsonify(status=404, message="Specified article was not found")
     if g.userPermission < 9:
@@ -105,7 +105,7 @@ def removeArticle(articleID):
 @wiki_api.route('/<int:articleID>', methods=["GET"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def getArticle(articleID):
+async def getArticle(articleID):
     articleData = g.db.get(
         "SELECT articleID, articleTitle, articleBody,"
         + " targetType, targetID, revision, createdTime, userID,"
@@ -139,7 +139,7 @@ def getArticle(articleID):
 @wiki_api.route('/find', methods=["GET"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def findArticle():
+async def findArticle():
     '''記事が存在するか確認'''
     targetType = request.args.get('type', default=None, type=int)
     targetID = request.args.get('id', default=None, type=int)
@@ -168,8 +168,8 @@ def findArticle():
 @wiki_api.route('/<int:articleID>', methods=["PUT"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def editArticle(articleID):
-    params = request.get_json()
+async def editArticle(articleID):
+    params = await request.get_json()
     if not params:
         return jsonify(
             status=400,

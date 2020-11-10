@@ -1,4 +1,4 @@
-from flask import Blueprint, request, g, jsonify
+from quart import Blueprint, request, g, jsonify
 from .authorizator import auth, token_serializer
 from .limiter import apiLimiter, handleApiPermission
 from .recorder import recordApiRequest
@@ -13,8 +13,8 @@ characters_api = Blueprint('characters_api', __name__)
 @characters_api.route('/', methods=["POST"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def addCharacter():
-    params = request.get_json()
+async def addCharacter():
+    params = await request.get_json()
     if not params:
         return jsonify(status=400, message="Request parameters are not satisfied.")
     if "charaName" not in params.keys():
@@ -40,7 +40,7 @@ def addCharacter():
 @characters_api.route('/<int:charaID>', methods=["DELETE"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def removeCharacter(charaID):
+async def removeCharacter(charaID):
     if not g.db.has("info_tag", "tagID=%s", (charaID,)):
         return jsonify(status=404, message="Specified character was not found")
     illustCount = g.db.get(
@@ -58,7 +58,7 @@ def removeCharacter(charaID):
 @characters_api.route('/<int:charaID>', methods=["GET"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def getCharacter(charaID):
+async def getCharacter(charaID):
     charaData = g.db.get(
         "SELECT * FROM info_tag WHERE tagID=%s AND tagType=1", (charaID,)
     )
@@ -77,8 +77,8 @@ def getCharacter(charaID):
 @characters_api.route('/<int:charaID>', methods=["PUT"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def editCharacter(charaID):
-    params = request.get_json()
+async def editCharacter(charaID):
+    params = await request.get_json()
     if not params:
         return jsonify(status=400, message="Request parameters are not satisfied.")
     validParams = {

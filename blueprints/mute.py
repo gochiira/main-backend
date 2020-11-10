@@ -1,4 +1,4 @@
-from flask import Flask, g, request, jsonify, Blueprint, current_app
+from quart import g, request, jsonify, Blueprint, current_app
 from .authorizator import auth
 from .limiter import apiLimiter, handleApiPermission
 from .recorder import recordApiRequest
@@ -9,10 +9,10 @@ mute_api = Blueprint('mute_api', __name__)
 @mute_api.route('/add', methods=["POST"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def addMute():
+async def addMute():
     if g.userPermission not in [0, 9]:
         return jsonify(status=400, message='Bad request')
-    params = request.get_json()
+    params = await request.get_json()
     if not params:
         return jsonify(
             status=400,
@@ -50,10 +50,10 @@ def addMute():
 @mute_api.route('/remove', methods=["POST"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def removeMute():
+async def removeMute():
     if g.userPermission not in [0, 9]:
         return jsonify(status=400, message='Bad request')
-    params = request.get_json()
+    params = await request.get_json()
     if not params:
         return jsonify(
             status=400,
@@ -91,7 +91,7 @@ def removeMute():
 @mute_api.route('/list', methods=["GET"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def listMute():
+async def listMute():
     recordApiRequest(
         g.userID,
         "listMute",

@@ -1,4 +1,4 @@
-from flask import Blueprint, request, g, jsonify
+from quart import Blueprint, request, g, jsonify
 from .authorizator import auth, token_serializer
 from .limiter import apiLimiter, handleApiPermission
 from .recorder import recordApiRequest
@@ -13,7 +13,7 @@ artists_api = Blueprint('artists_api', __name__)
 @artists_api.route('/', methods=["POST"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def addArtist():
+async def addArtist():
     # 全体管理者権限を要求(一般ユーザーは作品投稿時点で処理)
     if g.userPermission != 9:
         return jsonify(
@@ -21,7 +21,7 @@ def addArtist():
             message="You don't have enough permissions."
         )
     # パラメータ検証
-    params = request.get_json()
+    params = await request.get_json()
     if not params:
         return jsonify(
             status=400,
@@ -67,7 +67,7 @@ def addArtist():
 @artists_api.route('/<int:artistID>', methods=["DELETE"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def removeArtist(artistID):
+async def removeArtist(artistID):
     # 全体管理者権限を要求
     if g.userPermission != 9:
         return jsonify(
@@ -98,7 +98,7 @@ def removeArtist(artistID):
 @artists_api.route('/<int:artistID>', methods=["GET"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def getArtist(artistID):
+async def getArtist(artistID):
     recordApiRequest(g.userID, "getArtist", param1=artistID)
     artistData = g.db.get(
         "SELECT * FROM info_artist WHERE artistID = %s", (artistID,)
@@ -122,14 +122,14 @@ def getArtist(artistID):
 @artists_api.route('/<int:artistID>', methods=["PUT"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def editArtist(artistID):
+async def editArtist(artistID):
     # 一般ユーザー もしくは 全体管理者権限を要求
     if g.userPermission not in [0, 9]:
         return jsonify(
             status=401,
             message="You don't have enough permissions."
         )
-    params = request.get_json()
+    params = await request.get_json()
     if not params:
         return jsonify(
             status=400,

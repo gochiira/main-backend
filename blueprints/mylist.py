@@ -1,4 +1,4 @@
-from flask import Flask, g, request, jsonify, Blueprint, current_app
+from quart import g, request, jsonify, Blueprint, current_app
 from .authorizator import auth
 from .limiter import apiLimiter, handleApiPermission
 from .recorder import recordApiRequest
@@ -27,7 +27,7 @@ def getMylistCountDict(illustIDs):
 @mylist_api.route('/', methods=["POST"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def createMylist():
+async def createMylist():
     if g.userPermission not in [0, 9]:
         return jsonify(status=400, message='Bad request')
     mylistCount = g.db.get(
@@ -37,7 +37,7 @@ def createMylist():
     if mylistCount:
         if mylistCount[0][0] > 9:
             return jsonify(status=400, message="You have too many mylists, delete one and try again.")
-    params = request.get_json()
+    params = await request.get_json()
     if not params:
         return jsonify(status=400, message="Request parameters are not satisfied.")
     name = params.get("name", "")
@@ -61,7 +61,7 @@ def createMylist():
 @mylist_api.route('/<int:mylistID>', methods=["GET"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def getMylist(mylistID):
+async def getMylist(mylistID):
     if not g.db.has("info_mylist", "mylistID=%s", (mylistID,)):
         return jsonify(status=404, message="The mylist was not exists")
     # マイリストの所有者を確認
@@ -154,10 +154,10 @@ def getMylist(mylistID):
 @mylist_api.route('/<int:mylistID>', methods=["PUT"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def editMylist(mylistID):
+async def editMylist(mylistID):
     if g.userPermission not in [0, 9]:
         return jsonify(status=400, message='Bad request')
-    params = request.get_json()
+    params = await request.get_json()
     if not params:
         return jsonify(status=400, message="Request parameters are not satisfied.")
     if not g.db.has("info_mylist", "mylistID=%s", (mylistID,)):
@@ -229,7 +229,7 @@ def editMylist(mylistID):
 @mylist_api.route('/<int:mylistID>/find', methods=["GET"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def findInMylist(mylistID):
+async def findInMylist(mylistID):
     ''' マイリスト内に指定されたイラストが含まれているかを調べる '''
     if g.userPermission not in [0, 9]:
         return jsonify(status=400, message='Bad request')
@@ -244,7 +244,7 @@ def findInMylist(mylistID):
 @mylist_api.route('/<int:mylistID>/finds', methods=["GET", "POST"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def findsInMylist(mylistID):
+async def findsInMylist(mylistID):
     ''' マイリスト内に指定されたイラストが含まれているかを調べる '''
     if g.userPermission not in [0, 9]:
         return jsonify(status=400, message='Bad request')
@@ -257,7 +257,7 @@ def findsInMylist(mylistID):
         (g.userID, mylistID, mylistID)
     ):
         return jsonify(status=400, message="You don't have permission")
-    params = request.get_json()
+    params = await request.get_json()
     if not params:
         return jsonify(status=400, message="Request parameters are not satisfied.")
     illustIDs = params.get("ids", [])
@@ -271,7 +271,7 @@ def findsInMylist(mylistID):
 @mylist_api.route('/list', methods=["GET"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def listMylist():
+async def listMylist():
     userID = request.args.get('userID', default=g.userID, type=int)
     userName = g.db.get(
         "SELECT userName FROM data_user WHERE userID=%s",

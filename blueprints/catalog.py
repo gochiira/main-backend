@@ -1,4 +1,4 @@
-from flask import Blueprint, request, g, jsonify
+from quart import Blueprint, request, g, jsonify
 from .authorizator import auth, token_serializer
 from .limiter import apiLimiter, handleApiPermission
 from .recorder import recordApiRequest
@@ -15,7 +15,7 @@ catalog_api = Blueprint('catalog_api', __name__)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
 @apiCache.cached(timeout=7, query_string=True)
-def listArtists():
+async def listArtists():
     '''
     REQ
      sort=c(ount)/d(ate)/l(ikes)/n(ame)
@@ -88,7 +88,7 @@ def listArtists():
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
 @apiCache.cached(timeout=7, query_string=True)
-def listTags():
+async def listTags():
     '''
     REQ
      sort=c(ount)/d(ate)/l(ikes)/n(ame)
@@ -156,7 +156,7 @@ def listTags():
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
 @apiCache.cached(timeout=7, query_string=True)
-def listCharacters():
+async def listCharacters():
     '''
     REQ
      sort=c(ount)/d(ate)/l(ikes)/n(ame)
@@ -225,7 +225,7 @@ def listCharacters():
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
 @apiCache.cached(timeout=7, query_string=True)
-def listUploaders():
+async def listUploaders():
     '''
     REQ
      sort=c(ount)/d(ate)/l(ikes)/n(ame)

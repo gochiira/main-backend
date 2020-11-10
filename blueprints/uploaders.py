@@ -1,4 +1,4 @@
-from flask import Blueprint, request, g, jsonify
+from quart import Blueprint, request, g, jsonify
 from .authorizator import auth, token_serializer
 from .limiter import apiLimiter, handleApiPermission
 from .recorder import recordApiRequest
@@ -14,7 +14,7 @@ uploaders_api = Blueprint('uploaders_api', __name__)
 @uploaders_api.route('/<int:uploaderID>', methods=["GET"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def getUploader(uploaderID):
+async def getUploader(uploaderID):
     recordApiRequest(g.userID, "getUploader", param1=uploaderID)
     uploaderData = g.db.get(
         "SELECT userID,userName,userFavorite FROM data_user WHERE userID = %s",

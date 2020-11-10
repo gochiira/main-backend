@@ -1,4 +1,4 @@
-from flask import Blueprint, g, request, jsonify, escape
+from quart import Blueprint, g, request, jsonify, escape
 from .authorizator import auth, token_serializer
 from .limiter import apiLimiter, handleApiPermission
 from .recorder import recordApiRequest
@@ -15,7 +15,7 @@ TOYMONEY_ENDPOINT = "http://127.0.0.1:7070"
 )
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def torimochi(text):
+async def torimochi(text):
     # 別サービスで使う認証トークンをDBから取ってくる
     toyApiKey = g.db.get(
         "SELECT userToyApiKey FROM data_user WHERE userID=%s",
@@ -31,7 +31,7 @@ def torimochi(text):
             headers=headers
         )
     else:
-        data = request.get_json()
+        data = await request.get_json()
         if request.method == "POST":
             resp = requests.post(
                 TOYMONEY_ENDPOINT + path,

@@ -1,4 +1,4 @@
-from flask import Blueprint, g, request, jsonify, escape, current_app
+from quart import Blueprint, g, request, jsonify, escape, current_app
 from datetime import datetime, timedelta
 from .authorizator import auth, token_serializer
 from .limiter import apiLimiter, handleApiPermission
@@ -153,7 +153,7 @@ def getRanking(whereSql, sortMethod):
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
 @apiCache.cached(timeout=500, query_string=True)
-def getDailyViewsRanking():
+async def getDailyViewsRanking():
     now = datetime.now()
     whereSql = f"""rankingYear={now.year}
         AND rankingMonth={now.month}
@@ -165,7 +165,7 @@ def getDailyViewsRanking():
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
 @apiCache.cached(timeout=300, query_string=True)
-def getDailyLikesRanking():
+async def getDailyLikesRanking():
     now = datetime.now()
     whereSql = f"""rankingYear={now.year}
         AND rankingMonth={now.month}
@@ -177,7 +177,7 @@ def getDailyLikesRanking():
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
 @apiCache.cached(timeout=300, query_string=True)
-def getWeeklyViewsRanking():
+async def getWeeklyViewsRanking():
     now = datetime.now()
     if now.month > 1:
         month_days = calendar.monthrange(now.year, now.month-1)[1]
@@ -197,7 +197,7 @@ def getWeeklyViewsRanking():
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
 @apiCache.cached(timeout=300, query_string=True)
-def getWeeklyLikesRanking():
+async def getWeeklyLikesRanking():
     now = datetime.now()
     if now.month > 1:
         month_days = calendar.monthrange(now.year, now.month-1)[1]
@@ -217,7 +217,7 @@ def getWeeklyLikesRanking():
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
 @apiCache.cached(timeout=300, query_string=True)
-def getMonthlyViewsRanking():
+async def getMonthlyViewsRanking():
     year = request.args.get('year', default=datetime.now().year, type=int)
     month = request.args.get('month', default=datetime.now().month, type=int)
     whereSql = f"""rankingYear={year} AND rankingMonth={month}"""
@@ -228,7 +228,7 @@ def getMonthlyViewsRanking():
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
 @apiCache.cached(timeout=300, query_string=True)
-def getMonthlyLikesRanking():
+async def getMonthlyLikesRanking():
     year = request.args.get('year', default=datetime.now().year, type=int)
     month = request.args.get('month', default=datetime.now().month, type=int)
     whereSql = f"""rankingYear={year} AND rankingMonth={month}"""

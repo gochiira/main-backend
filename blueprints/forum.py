@@ -1,4 +1,4 @@
-from flask import Blueprint, request, g, jsonify
+from quart import Blueprint, request, g, jsonify
 from .authorizator import auth, token_serializer
 from .limiter import apiLimiter, handleApiPermission
 from .recorder import recordApiRequest
@@ -13,8 +13,8 @@ forum_api = Blueprint('forum_api', __name__)
 @forum_api.route('/', methods=["POST"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def addThread():
-    params = request.get_json()
+async def addThread():
+    params = await request.get_json()
     if not params:
         return jsonify(status=400, message="Request parameters are not satisfied.")
     if "charaName" not in params.keys():
@@ -40,7 +40,7 @@ def addThread():
 @forum_api.route('/<int:charaID>', methods=["DELETE"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def removeThread(charaID):
+async def removeThread(charaID):
     if not g.db.has("info_tag", "tagID=%s", (charaID,)):
         return jsonify(status=404, message="Specified Thread was not found")
     illustCount = g.db.get(
@@ -58,7 +58,7 @@ def removeThread(charaID):
 @forum_api.route('/<int:charaID>', methods=["GET"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def getThread(charaID):
+async def getThread(charaID):
     charaData = g.db.get(
         "SELECT * FROM info_tag WHERE tagID=%s AND tagType=1", (charaID,)
     )
@@ -77,8 +77,8 @@ def getThread(charaID):
 @forum_api.route('/<int:charaID>', methods=["PUT"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def editThread(charaID):
-    params = request.get_json()
+async def editThread(charaID):
+    params = await request.get_json()
     if not params:
         return jsonify(status=400, message="Request parameters are not satisfied.")
     validParams = {

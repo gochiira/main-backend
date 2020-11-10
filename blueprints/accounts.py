@@ -1,4 +1,4 @@
-from flask import Blueprint, g, request, jsonify, escape, redirect
+from quart import Blueprint, g, request, jsonify, escape, redirect
 from datetime import datetime
 import hashlib
 import requests
@@ -74,12 +74,12 @@ def generateApiKey(accountID):
 
 @accounts_api.route('/', methods=["POST"], strict_slashes=False)
 @auth.login_required
-def createAccount():
+async def createAccount():
     # Web管理者権限以上を要求
     if g.userPermission < 5:
         return jsonify(status=403, message="You don't have enough permissions.")
     # 入力チェック
-    params = request.get_json()
+    params = await request.get_json()
     if not params:
         return jsonify(
             status=400,
@@ -178,9 +178,9 @@ def createAccount():
 
 # APIリミットが必要だと思う
 @accounts_api.route('/login/form', methods=["POST"])
-def loginAccountWithForm():
+async def loginAccountWithForm():
     '''アカウント名とパスワード もしくはLINE認証コードでログイン'''
-    params = request.get_json()
+    params = await request.get_json()
     if not params:
         return jsonify(
             status=400,
@@ -278,9 +278,9 @@ def loginAccountWithForm():
 
 # APIリミットが必要だと思う
 @accounts_api.route('/login/line', methods=["POST"])
-def loginAccountWithLine():
+async def loginAccountWithLine():
     '''認可コードでログイン'''
-    params = request.get_json()
+    params = await request.get_json()
     if not params:
         return jsonify(status=403, message="Direct access is not allowed.")
     if "code" not in params:
@@ -325,14 +325,14 @@ def loginAccountWithLine():
 @accounts_api.route('/<int:accountID>/connect/telegram', methods=["POST"])
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def connectTelegramAccount(accountID):
+async def connectTelegramAccount(accountID):
     # 一般権限&本人の要求 もしくは 全体管理者権限を要求
     if g.userID != accountID and g.userPermission < 9:
         return jsonify(
             status=403,
             message="You don't have enough permissions."
         )
-    params = request.get_json()
+    params = await request.get_json()
     if not params:
         return jsonify(status=403, message="Direct access is not allowed.")
     if not ("resp" in params and "hash" in params):
@@ -362,14 +362,14 @@ def connectTelegramAccount(accountID):
 @accounts_api.route('/<int:accountID>/connect/line', methods=["POST"])
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def connectLineAccount(accountID):
+async def connectLineAccount(accountID):
     # 一般権限&本人の要求 もしくは 全体管理者権限を要求
     if g.userID != accountID and g.userPermission < 9:
         return jsonify(
             status=403,
             message="You don't have enough permissions."
         )
-    params = request.get_json()
+    params = await request.get_json()
     if not params:
         return jsonify(status=403, message="Direct access is not allowed.")
     if "code" not in params:
@@ -411,14 +411,14 @@ def connectLineAccount(accountID):
 @accounts_api.route('/<int:accountID>/connect/line_notify', methods=["POST"])
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def connectLineNotify(accountID):
+async def connectLineNotify(accountID):
     # 一般権限&本人の要求 もしくは 全体管理者権限を要求
     if g.userID != accountID and g.userPermission < 9:
         return jsonify(
             status=403,
             message="You don't have enough permissions."
         )
-    params = request.get_json()
+    params = await request.get_json()
     if not params:
         return jsonify(status=403, message="Direct access is not allowed.")
     if "code" not in params:
@@ -456,7 +456,7 @@ def connectLineNotify(accountID):
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
 @apiCache.cached(timeout=15)
-def getSelfAccount():
+async def getSelfAccount():
     resp = g.db.get(
         """SELECT
             data_user.userID,
@@ -561,7 +561,7 @@ def getSelfAccount():
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
 @apiCache.cached(timeout=5)
-def getAccount(accountID):
+async def getAccount(accountID):
     resp = g.db.get(
         """SELECT userID,userDisplayID,userName,userFavorite FROM data_user
         WHERE userID=%s""",
@@ -587,7 +587,7 @@ def getAccount(accountID):
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
 @apiCache.cached(timeout=10, query_string=True)
-def getUploadHistory(accountID):
+async def getUploadHistory(accountID):
     '''
     REQ
      sort=d(ate)
@@ -644,7 +644,7 @@ def getUploadHistory(accountID):
 @accounts_api.route('/<int:accountID>/apiKey', methods=["GET"])
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def regenerateApiKey(accountID):
+async def regenerateApiKey(accountID):
     if g.userID != accountID and g.userPermission < 9:
         return jsonify(
             status=403,
@@ -657,7 +657,7 @@ def regenerateApiKey(accountID):
 @accounts_api.route('/<int:accountID>', methods=["DELETE"])
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def destroyAccount(accountID):
+async def destroyAccount(accountID):
     # 一般権限&本人の要求 もしくは 全体管理者権限を要求
     if g.userID != accountID and g.userPermission < 9:
         return jsonify(
@@ -683,14 +683,14 @@ def destroyAccount(accountID):
 @accounts_api.route('/<int:accountID>', methods=["PUT"])
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-def editAccount(accountID):
+async def editAccount(accountID):
     # 一般権限&本人の要求 もしくは 全体管理者権限を要求
     if g.userID != accountID and g.userPermission < 9:
         return jsonify(
             status=403,
             message="You don't have enough permissions."
         )
-    params = request.get_json()
+    params = await request.get_json()
     validParams = [
         "userDisplayID",
         "userName",
