@@ -3,7 +3,7 @@ from .authorizator import auth, token_serializer
 from .limiter import apiLimiter, handleApiPermission
 from .recorder import recordApiRequest
 from .worker import processConvertRequest
-from .cache import apiCache
+
 from datetime import datetime
 from redis import Redis
 from rq import Queue
@@ -121,7 +121,6 @@ async def destroyArt(illustID):
 @arts_api.route('/<int:illustID>', methods=["GET"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-@apiCache.cached(timeout=5)
 async def getArt(illustID):
     # TODO: 置き換え情報の取得と応答
     artData = g.db.get(

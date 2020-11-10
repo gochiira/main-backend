@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from .authorizator import auth, token_serializer
 from .limiter import apiLimiter, handleApiPermission
 from .recorder import recordApiRequest
-from .cache import apiCache
+
 import traceback
 import calendar
 import json
@@ -152,7 +152,6 @@ def getRanking(whereSql, sortMethod):
 @ranking_api.route('/daily/views', methods=["GET"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-@apiCache.cached(timeout=500, query_string=True)
 async def getDailyViewsRanking():
     now = datetime.now()
     whereSql = f"""rankingYear={now.year}
@@ -164,7 +163,6 @@ async def getDailyViewsRanking():
 @ranking_api.route('/daily/likes', methods=["GET"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-@apiCache.cached(timeout=300, query_string=True)
 async def getDailyLikesRanking():
     now = datetime.now()
     whereSql = f"""rankingYear={now.year}
@@ -176,7 +174,6 @@ async def getDailyLikesRanking():
 @ranking_api.route('/weekly/views', methods=["GET"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-@apiCache.cached(timeout=300, query_string=True)
 async def getWeeklyViewsRanking():
     now = datetime.now()
     if now.month > 1:
@@ -196,7 +193,6 @@ async def getWeeklyViewsRanking():
 @ranking_api.route('/weekly/likes', methods=["GET"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-@apiCache.cached(timeout=300, query_string=True)
 async def getWeeklyLikesRanking():
     now = datetime.now()
     if now.month > 1:
@@ -216,7 +212,6 @@ async def getWeeklyLikesRanking():
 @ranking_api.route('/monthly/views', methods=["GET"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-@apiCache.cached(timeout=300, query_string=True)
 async def getMonthlyViewsRanking():
     year = request.args.get('year', default=datetime.now().year, type=int)
     month = request.args.get('month', default=datetime.now().month, type=int)
@@ -227,7 +222,6 @@ async def getMonthlyViewsRanking():
 @ranking_api.route('/monthly/likes', methods=["GET"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-@apiCache.cached(timeout=300, query_string=True)
 async def getMonthlyLikesRanking():
     year = request.args.get('year', default=datetime.now().year, type=int)
     month = request.args.get('month', default=datetime.now().month, type=int)

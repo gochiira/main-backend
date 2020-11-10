@@ -4,7 +4,7 @@ from .limiter import apiLimiter, handleApiPermission
 from .recorder import recordApiRequest
 from .lib.saucenao_client import SauceNaoImageSearch
 from .lib.ascii2d_client import Ascii2dImageSearch
-from .cache import apiCache
+
 import json
 from PIL import Image
 import imagehash
@@ -169,7 +169,6 @@ search_api = Blueprint('search_api', __name__)
 @search_api.route("/tag", methods=["GET"])
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-@apiCache.cached(timeout=7, query_string=True)
 async def searchByTag():
     tagID = request.args.get('id', default=None, type=int)
     if not tagID:
@@ -188,7 +187,6 @@ async def searchByTag():
 @search_api.route("/artist", methods=["GET"])
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-@apiCache.cached(timeout=7, query_string=True)
 async def searchByArtist():
     artistID = request.args.get('id', default=None, type=int)
     if not artistID:
@@ -206,7 +204,6 @@ async def searchByArtist():
 @search_api.route("/uploader", methods=["GET"])
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-@apiCache.cached(timeout=7, query_string=True)
 async def searchByUploader():
     uploaderID = request.args.get('id', default=None, type=int)
     if not uploaderID:
@@ -224,7 +221,6 @@ async def searchByUploader():
 @search_api.route("/character", methods=["GET"])
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-@apiCache.cached(timeout=7, query_string=True)
 async def searchByCharacter():
     charaID = request.args.get('id', default=None, type=int)
     if not charaID:
@@ -243,7 +239,6 @@ async def searchByCharacter():
 @search_api.route("/keyword", methods=["GET"])
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-@apiCache.cached(timeout=7, query_string=True)
 async def searchByKeyword():
     keyword = request.args.get("keyword", default=None, type=str)
     if not keyword:
@@ -255,7 +250,6 @@ async def searchByKeyword():
 @search_api.route('/all', methods=["GET"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-@apiCache.cached(timeout=7, query_string=True)
 async def searchByAll():
     whereSql = "1 = 1"
     return getSearch(whereSql, "全て")
@@ -526,7 +520,6 @@ async def searchByImage():
 @search_api.route("/multiple/tag", methods=["GET"])
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-@apiCache.cached(timeout=7, query_string=True)
 async def searchByMultipleTag():
     # パラメータの確認
     tagID = request.args.get('id', default=None, type=str)

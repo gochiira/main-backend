@@ -6,7 +6,6 @@ import jwt
 from .authorizator import auth, token_serializer
 from .limiter import apiLimiter, handleApiPermission
 from .recorder import recordApiRequest
-from .cache import apiCache
 
 accounts_api = Blueprint('accounts_api', __name__)
 
@@ -455,7 +454,6 @@ async def connectLineNotify(accountID):
 @accounts_api.route('/me', methods=["GET"])
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-@apiCache.cached(timeout=15)
 async def getSelfAccount():
     resp = g.db.get(
         """SELECT
@@ -560,7 +558,6 @@ async def getSelfAccount():
 @accounts_api.route('/<int:accountID>', methods=["GET"])
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-@apiCache.cached(timeout=5)
 async def getAccount(accountID):
     resp = g.db.get(
         """SELECT userID,userDisplayID,userName,userFavorite FROM data_user
@@ -586,7 +583,6 @@ async def getAccount(accountID):
 @accounts_api.route('/<int:accountID>/upload_history', methods=["GET"])
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-@apiCache.cached(timeout=10, query_string=True)
 async def getUploadHistory(accountID):
     '''
     REQ

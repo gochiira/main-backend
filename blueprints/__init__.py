@@ -1,4 +1,3 @@
-import quart.flask_patch
 from .accounts import accounts_api
 from .artists import artists_api
 from .arts import arts_api
@@ -20,7 +19,6 @@ from .uploaders import uploaders_api
 from .ranking import ranking_api
 from .authorizator import auth
 from .limiter import apiLimiter
-from .cache import apiCache
 
 __all__ = [
     "accounts_api",
@@ -43,6 +41,5 @@ __all__ = [
     "uploaders_api",
     "ranking_api",
     "auth",
-    "apiLimiter",
-    "apiCache"
+    "apiLimiter"
 ]

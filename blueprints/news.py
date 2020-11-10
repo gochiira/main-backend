@@ -2,7 +2,7 @@ from quart import g, request, jsonify, escape, Blueprint
 from .authorizator import auth, token_serializer
 from .limiter import apiLimiter, handleApiPermission
 from .recorder import recordApiRequest
-from .cache import apiCache
+
 
 news_api = Blueprint('news_api', __name__)
 
@@ -60,7 +60,6 @@ async def deleteNews(newsID):
 @news_api.route('/list', methods=["GET"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-@apiCache.cached(timeout=1800, query_string=True)
 async def listNews():
     maxNews = request.args.get('count', default=50, type=int)
     datas = g.db.get(
@@ -73,7 +72,6 @@ async def listNews():
 @news_api.route('/<int:newsID>', methods=["GET"], strict_slashes=False)
 @auth.login_required
 @apiLimiter.limit(handleApiPermission)
-@apiCache.cached(timeout=1800)
 async def getNews(newsID):
     resp = g.db.get(
         "SELECT * FROM data_news WHERE newsID=%s",
