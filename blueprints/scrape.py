@@ -1,5 +1,5 @@
 from flask import Blueprint, g, request, jsonify, current_app
-from .authorizator import auth
+from ..extensions.httpauth import auth
 from ..extensions.limiter import limiter, handleApiPermission
 from .recorder import recordApiRequest
 from .lib.pixiv_client import IllustGetter
@@ -18,7 +18,7 @@ from imghdr import tests
 CDN_ADDRESS = "https://api.gochiusa.team/static/temp/"
 ALLOWED_EXTENSIONS = ["gif", "png", "jpg", "jpeg", "webp"]
 JPEG_MARK = b'\xff\xd8\xff\xdb\x00C\x00\x08\x06\x06' \
-            b'\x07\x06\x05\x08\x07\x07\x07\t\t\x08\n\x0c\x14\r\x0c\x0b\x0b\x0c\x19\x12\x13\x0f'
+    b'\x07\x06\x05\x08\x07\x07\x07\t\t\x08\n\x0c\x14\r\x0c\x0b\x0b\x0c\x19\x12\x13\x0f'
 
 
 def test_jpeg(h, f):
@@ -31,6 +31,8 @@ def test_jpeg(h, f):
     """JPEG data in JFIF or Exif format"""
     if h[6:10] in (b'JFIF', b'Exif') or h[:2] == b'\xff\xd8':
         return 'jpeg'
+
+
 tests.append(test_jpeg)
 
 
