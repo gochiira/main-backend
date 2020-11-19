@@ -1,6 +1,6 @@
 from flask import Blueprint, g, request, jsonify, current_app
 from .authorizator import auth
-from .limiter import apiLimiter, handleApiPermission
+from ..extensions.limiter import limiter, handleApiPermission
 from .recorder import recordApiRequest
 from .lib.pixiv_client import IllustGetter
 from .lib.twitter_client import TweetGetter
@@ -48,7 +48,7 @@ scrape_api = Blueprint('scrape_api', __name__)
 
 @scrape_api.route('/twitter', methods=["POST"], strict_slashes=False)
 @auth.login_required
-@apiLimiter.limit(handleApiPermission)
+@limiter.limit(handleApiPermission)
 def getArtByTwitter():
     if g.userPermission not in [0, 9]:
         return jsonify(status=400, message='Bad request')
@@ -70,7 +70,7 @@ def getArtByTwitter():
 
 @scrape_api.route('/pixiv', methods=["POST"], strict_slashes=False)
 @auth.login_required
-@apiLimiter.limit(handleApiPermission)
+@limiter.limit(handleApiPermission)
 def getArtByPixiv():
     if g.userPermission not in [0, 9]:
         return jsonify(status=400, message='Bad request')
@@ -98,7 +98,7 @@ def getArtByPixiv():
 
 @scrape_api.route('/seiga', methods=["POST"], strict_slashes=False)
 @auth.login_required
-@apiLimiter.limit(handleApiPermission)
+@limiter.limit(handleApiPermission)
 def getArtByNicoNicoSeiga():
     if g.userPermission not in [0, 9]:
         return jsonify(status=400, message='Bad request')
@@ -119,7 +119,7 @@ def getArtByNicoNicoSeiga():
 
 @scrape_api.route('/danbooru', methods=["POST"], strict_slashes=False)
 @auth.login_required
-@apiLimiter.limit(handleApiPermission)
+@limiter.limit(handleApiPermission)
 def getArtByDanbooru():
     if g.userPermission not in [0, 9]:
         return jsonify(status=400, message='Bad request')
@@ -140,7 +140,7 @@ def getArtByDanbooru():
 
 @scrape_api.route('/booth', methods=["POST"], strict_slashes=False)
 @auth.login_required
-@apiLimiter.limit(handleApiPermission)
+@limiter.limit(handleApiPermission)
 def getArtByBooth():
     if g.userPermission not in [0, 9]:
         return jsonify(status=400, message='Bad request')
@@ -161,7 +161,7 @@ def getArtByBooth():
 
 @scrape_api.route('/self', methods=["POST"], strict_slashes=False)
 @auth.login_required
-@apiLimiter.limit(handleApiPermission)
+@limiter.limit(handleApiPermission)
 def getArtBySelf():
     if g.userPermission not in [0, 9]:
         return jsonify(status=400, message='Bad request')
@@ -198,6 +198,6 @@ def getArtBySelf():
 
 @scrape_api.route('/predict_tag', methods=["GET"], strict_slashes=False)
 @auth.login_required
-@apiLimiter.limit(handleApiPermission)
+@limiter.limit(handleApiPermission)
 def predictTag():
     return "Not implemeted"

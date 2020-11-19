@@ -1,9 +1,9 @@
 from flask import Blueprint, g, request, jsonify, escape, current_app
-from .authorizator import auth, token_serializer
-from .limiter import apiLimiter, handleApiPermission
+from ..extensions.auth import auth, token_serializer
+from ..extensions.limiter import limiter, handleApiPermission
+from ..extensions.cache import cache
 from .recorder import recordApiRequest
 from .worker import processConvertRequest
-from .cache import apiCache
 from datetime import datetime
 from redis import Redis
 from rq import Queue
@@ -25,7 +25,7 @@ arts_api = Blueprint('arts_api', __name__)
 # だいたい完成! (複数画像未サポート 画像重複確認未サポート
 @arts_api.route('/', methods=["POST"], strict_slashes=False)
 @auth.login_required
-@apiLimiter.limit(handleApiPermission)
+@limiter.limit(handleApiPermission)
 def createArt():
     if g.userPermission not in [0, 9]:
         return jsonify(status=400, message='Bad request')
@@ -103,7 +103,7 @@ def createArt():
 
 @arts_api.route('/<int:illustID>', methods=["DELETE"], strict_slashes=False)
 @auth.login_required
-@apiLimiter.limit(handleApiPermission)
+@limiter.limit(handleApiPermission)
 def destroyArt(illustID):
     if g.userPermission not in [0, 9]:
         return jsonify(status=400, message='Bad request')
@@ -120,8 +120,8 @@ def destroyArt(illustID):
 
 @arts_api.route('/<int:illustID>', methods=["GET"], strict_slashes=False)
 @auth.login_required
-@apiLimiter.limit(handleApiPermission)
-@apiCache.cached(timeout=5)
+@limiter.limit(handleApiPermission)
+@cache.cached(timeout=5)
 def getArt(illustID):
     # TODO: 置き換え情報の取得と応答
     artData = g.db.get(
@@ -261,7 +261,7 @@ def getArt(illustID):
 
 @arts_api.route('/<int:illustID>', methods=["PUT"], strict_slashes=False)
 @auth.login_required
-@apiLimiter.limit(handleApiPermission)
+@limiter.limit(handleApiPermission)
 def editArt(illustID):
     # TODO: 権限確認処理の欠如をどうにかする
     if g.userPermission not in [0, 9]:
@@ -370,7 +370,7 @@ def editArt(illustID):
 
 @arts_api.route('/<int:illustLowerID>/replace', methods=["PUT"], strict_slashes=False)
 @auth.login_required
-@apiLimiter.limit(handleApiPermission)
+@limiter.limit(handleApiPermission)
 def replaceArt(illustLowerID):
     if g.userPermission not in [0, 9]:
         return jsonify(status=400, message='Bad request')
@@ -515,7 +515,7 @@ def replaceArt(illustLowerID):
 
 @arts_api.route('/<int:illustID>/tags', methods=["DELETE"], strict_slashes=False)
 @auth.login_required
-@apiLimiter.limit(handleApiPermission)
+@limiter.limit(handleApiPermission)
 def deleteArtTag(illustID):
     if g.userPermission not in [0, 9]:
         return jsonify(status=400, message='Bad request')
@@ -542,7 +542,7 @@ def deleteArtTag(illustID):
 
 @arts_api.route('/<int:illustID>/tags', methods=["GET"], strict_slashes=False)
 @auth.login_required
-@apiLimiter.limit(handleApiPermission)
+@limiter.limit(handleApiPermission)
 def getArtTag(illustID):
     '''指定されたイラスト付属のタグ一覧を、フルデータとして取得する'''
     resp = g.db.get(
@@ -566,7 +566,7 @@ def getArtTag(illustID):
 
 @arts_api.route('/<int:illustID>/tags', methods=["PUT"], strict_slashes=False)
 @auth.login_required
-@apiLimiter.limit(handleApiPermission)
+@limiter.limit(handleApiPermission)
 def addArtTag(illustID):
     if g.userPermission not in [0, 9]:
         return jsonify(status=400, message='Bad request')
@@ -600,7 +600,7 @@ def addArtTag(illustID):
 
 @arts_api.route('/<int:illustID>/characters', methods=["DELETE"], strict_slashes=False)
 @auth.login_required
-@apiLimiter.limit(handleApiPermission)
+@limiter.limit(handleApiPermission)
 def deleteArtCharacter(illustID):
     if g.userPermission not in [0, 9]:
         return jsonify(status=400, message='Bad request')
@@ -627,7 +627,7 @@ def deleteArtCharacter(illustID):
 
 @arts_api.route('/<int:illustID>/characters', methods=["GET"], strict_slashes=False)
 @auth.login_required
-@apiLimiter.limit(handleApiPermission)
+@limiter.limit(handleApiPermission)
 def getArtCharacter(illustID):
     if g.userPermission not in [0, 9]:
         return jsonify(status=400, message='Bad request')
@@ -653,7 +653,7 @@ def getArtCharacter(illustID):
 
 @arts_api.route('/<int:illustID>/characters', methods=["PUT"], strict_slashes=False)
 @auth.login_required
-@apiLimiter.limit(handleApiPermission)
+@limiter.limit(handleApiPermission)
 def addArtCharacter(illustID):
     if g.userPermission not in [0, 9]:
         return jsonify(status=400, message='Bad request')
@@ -687,7 +687,7 @@ def addArtCharacter(illustID):
 
 @arts_api.route('/<int:illustID>/likes', methods=["PUT"], strict_slashes=False)
 @auth.login_required
-@apiLimiter.limit(handleApiPermission)
+@limiter.limit(handleApiPermission)
 def addArtLike(illustID):
     if g.userPermission not in [0, 9]:
         return jsonify(status=400, message='Bad request')
@@ -733,7 +733,7 @@ def addArtLike(illustID):
     strict_slashes=False
 )
 @auth.login_required
-@apiLimiter.limit(handleApiPermission)
+@limiter.limit(handleApiPermission)
 def addArtLikeWithType(illustID, likeType):
     if g.userPermission not in [0, 9]:
         return jsonify(status=400, message='Bad request')
@@ -814,7 +814,7 @@ def addArtLikeWithType(illustID, likeType):
     strict_slashes=False
 )
 @auth.login_required
-@apiLimiter.limit(handleApiPermission)
+@limiter.limit(handleApiPermission)
 def addArtView(illustID):
     if g.userPermission not in [0, 9]:
         return jsonify(status=400, message='Bad request')
@@ -878,7 +878,7 @@ def addArtView(illustID):
 
 @arts_api.route('/<int:illustID>/comments', methods=["GET"], strict_slashes=False)
 @auth.login_required
-@apiLimiter.limit(handleApiPermission)
+@limiter.limit(handleApiPermission)
 def getArtComments(illustID):
     per_page = 10
     pageID = request.args.get('page', default=1, type=int)
@@ -924,7 +924,7 @@ def getArtComments(illustID):
     strict_slashes=False
 )
 @auth.login_required
-@apiLimiter.limit(handleApiPermission)
+@limiter.limit(handleApiPermission)
 def addArtComment(illustID):
     if g.userPermission not in [0, 9]:
         return jsonify(status=400, message='Bad request')
@@ -955,7 +955,7 @@ def addArtComment(illustID):
     strict_slashes=False
 )
 @auth.login_required
-@apiLimiter.limit(handleApiPermission)
+@limiter.limit(handleApiPermission)
 def editArtComment(illustID, commentID):
     if g.userPermission not in [9]:
         return jsonify(status=400, message='Bad request')
@@ -994,7 +994,7 @@ def editArtComment(illustID, commentID):
     strict_slashes=False
 )
 @auth.login_required
-@apiLimiter.limit(handleApiPermission)
+@limiter.limit(handleApiPermission)
 def deleteArtComment(illustID, commentID):
     if g.userPermission not in [9]:
         return jsonify(status=400, message='Bad request')
