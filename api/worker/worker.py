@@ -2,12 +2,12 @@ from PIL import Image
 from itsdangerous import JSONWebSignatureSerializer as Serializer
 from tempfile import TemporaryDirectory
 from urllib.parse import parse_qs as parse_query
-from .lib.danbooru_client import DanbooruGetter
-from .lib.seiga_client import SeigaGetter
-from .lib.booth_client import BoothGetter
-from .lib.pixiv_client import IllustGetter
-from .lib.twitter_client import TweetGetter
-from .lib.notify_client import NotifyClient
+from ..scraper_lib.danbooru_client import DanbooruGetter
+from ..scraper_lib.seiga_client import SeigaGetter
+from ..scraper_lib.booth_client import BoothGetter
+from ..scraper_lib.pixiv_client import IllustGetter
+from ..scraper_lib.twitter_client import TweetGetter
+from ..scraper_lib.notify_client import NotifyClient
 from .db import SQLHandler
 from imghdr import what as what_img
 import os
