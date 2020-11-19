@@ -8,7 +8,7 @@ from ..scraper_lib.booth_client import BoothGetter
 from ..scraper_lib.pixiv_client import IllustGetter
 from ..scraper_lib.twitter_client import TweetGetter
 from ..scraper_lib.notify_client import NotifyClient
-from .db import SQLHandler
+from ..db import SQLHandler
 from imghdr import what as what_img
 import os
 import shutil
