@@ -1,3 +1,0 @@
-[submodule "api/scraper_lib"]
-	path = api/scraper_lib
-	url = https://github.com/gochiira/scraper-lib
