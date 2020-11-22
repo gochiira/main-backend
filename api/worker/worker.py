@@ -65,13 +65,18 @@ def registerIllust(params):
             origin_url = origin_url[:origin_url.find("?")]
         # ツイッターから取る場合
         if origin_url.startswith("https://twitter.com/"):
-            tg = TweetGetter()
+            tg = TweetGetter(
+                params["twitter"][0],
+                params["twitter"][1],
+                params["twitter"][2],
+                params["twitter"][3]
+            )
             imgs = tg.getTweet(origin_url)['illust']['imgs']
             img_addr = imgs[page]["large_src"]
             tg.downloadIllust(img_addr, orig_path)
         # ニコニコ静画から取る場合
         elif origin_url.startswith("https://seiga.nicovideo.jp/"):
-            sg = SeigaGetter()
+            sg = SeigaGetter(params["niconico"])
             img_addr = sg.getIllustSourceUrl(origin_url)
             sg.downloadIllust(img_addr, orig_path)
         # Danbooru
@@ -87,7 +92,7 @@ def registerIllust(params):
             bg.downloadIllust(img_addr, orig_path)
         # Pixivから取る場合
         elif origin_url.startswith("https://www.pixiv.net/"):
-            ig = IllustGetter()
+            ig = IllustGetter(params["pixiv"])
             imgs = ig.getIllust(origin_url)['illust']['imgs']
             img_addr = imgs[page]["large_src"]
             ig.downloadIllust(img_addr, orig_path)

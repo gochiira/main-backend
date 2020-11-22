@@ -30,6 +30,12 @@ TOYMONEY_SALT = environ.get('SALT_TOYMONEY')
 TOYMONEY_ENDPOINT = environ.get('TOYMONEY_ENDPOINT')
 TOYMONEY_TOKEN = environ.get('TOYMONEY_TOKEN')
 TOYMONEY_AMOUNT = 2
+TWITTER_CONSUMER_KEY = environ.get('API_TWITTER_CONSUMER_KEY')
+TWITTER_CONSUMER_SECRET = environ.get('API_TWITTER_CONSUMER_SECRET')
+TWITTER_AUTH_TOKEN = environ.get('API_TWITTER_AUTH_TOKEN')
+TWITTER_AUTH_SECRET = environ.get('API_TWITTER_AUTH_SECRET')
+PIXIV_AUTH = environ.get('API_PIXIV_FILE')
+NICONICO_AUTH = environ.get('API_NICONICO_FILE')
 
 arts_api = Blueprint('arts_api', __name__)
 
@@ -127,6 +133,14 @@ def createArt():
         "token": TOYMONEY_TOKEN,
         "amount": 2
     }
+    params["twitter"] = [
+        TWITTER_CONSUMER_KEY,
+        TWITTER_CONSUMER_SECRET,
+        TWITTER_AUTH_TOKEN,
+        TWITTER_AUTH_SECRET
+    ]
+    params["pixiv"] = PIXIV_AUTH
+    params["niconico"] = NICONICO_AUTH
     # Workerにパラメータを投げる
     if not current_app.debug:
         q = Queue(
