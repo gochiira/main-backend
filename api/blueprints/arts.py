@@ -1,9 +1,8 @@
 from flask import Blueprint, g, request, jsonify, escape, current_app
-from ..extensions import auth, token_serializer
-from ..extensions import limiter, handleApiPermission
-from ..extensions import cache
-from ..worker.worker import processConvertRequest
-from .recorder import recordApiRequest
+from ..extensions import (
+    auth, limiter, handleApiPermission, record
+)
+from ..worker import processConvertRequest
 from datetime import datetime
 from redis import Redis
 from rq import Queue
@@ -97,7 +96,7 @@ def createArt():
             description=f'sUploadedImageConverter (Issued by User{g.userID})'
         )
         q.enqueue(processConvertRequest, params)
-        recordApiRequest(g.userID, "addArt", param1=-1)
+        record(g.userID, "addArt", param1=-1)
     return jsonify(status=202, message="Accepted")
 
 
@@ -268,7 +267,10 @@ def editArt(illustID):
         return jsonify(status=400, message='Bad request')
     params = request.get_json()
     if not params:
-        return jsonify(status=400, message="Request parameters are not satisfied.")
+        return jsonify(
+            status=400,
+            message="Request parameters are not satisfied."
+        )
     # まず一旦タグを全部破壊
     resp = g.db.edit(
         "DELETE FROM data_tag WHERE illustID = %s",
@@ -346,7 +348,10 @@ def editArt(illustID):
     params = {validParams[p]: params[p] for p in params.keys() if p in validParams.keys()}
     if not params:
         g.db.rollback()
-        return jsonify(status=400, message="Request parameters are not satisfied.")
+        return jsonify(
+            status=400,
+            message="Request parameters are not satisfied."
+        )
     for extra in ['tag', 'chara']:
         if extra in params.keys():
             del params[extra]
@@ -376,9 +381,15 @@ def replaceArt(illustLowerID):
         return jsonify(status=400, message='Bad request')
     params = request.get_json()
     if not params:
-        return jsonify(status=400, message="Request parameters are not satisfied.")
+        return jsonify(
+            status=400,
+            message="Request parameters are not satisfied."
+        )
     if "status" not in params or "illustID" not in params:
-        return jsonify(status=400, message="Request parameters are not satisfied.")
+        return jsonify(
+            status=400,
+            message="Request parameters are not satisfied."
+        )
     # 置き換えられるIDが illustLowerID
     # 置き換え(よりよい方)が illustGreaterID
     illustGreaterID = int(params["illustID"])
@@ -521,7 +532,10 @@ def deleteArtTag(illustID):
         return jsonify(status=400, message='Bad request')
     params = request.get_json()
     if not params:
-        return jsonify(status=400, message="Request parameters are not satisfied.")
+        return jsonify(
+            status=400,
+            message="Request parameters are not satisfied."
+        )
     try:
         tagID = int(params.get("tagID"))
     except:
@@ -572,7 +586,10 @@ def addArtTag(illustID):
         return jsonify(status=400, message='Bad request')
     params = request.get_json()
     if not params:
-        return jsonify(status=400, message="Request parameters are not satisfied.")
+        return jsonify(
+            status=400,
+            message="Request parameters are not satisfied."
+        )
     try:
         tagID = int(params.get("tagID"))
         isExist = g.db.has("info_tag", "tagID=%s", (tagID,))
@@ -606,7 +623,10 @@ def deleteArtCharacter(illustID):
         return jsonify(status=400, message='Bad request')
     params = request.get_json()
     if not params:
-        return jsonify(status=400, message="Request parameters are not satisfied.")
+        return jsonify(
+            status=400,
+            message="Request parameters are not satisfied."
+        )
     try:
         tagID = int(params.get("charaID"))
     except:
@@ -659,7 +679,10 @@ def addArtCharacter(illustID):
         return jsonify(status=400, message='Bad request')
     params = request.get_json()
     if not params:
-        return jsonify(status=400, message="Request parameters are not satisfied.")
+        return jsonify(
+            status=400,
+            message="Request parameters are not satisfied."
+        )
     try:
         tagID = int(params.get("charaID"))
         isExist = g.db.has("info_tag", "tagID=%s", (tagID,))

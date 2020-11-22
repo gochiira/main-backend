@@ -1,7 +1,7 @@
 from flask import Blueprint, g, request, jsonify, current_app
-from ..extensions.httpauth import auth
-from ..extensions import limiter, handleApiPermission
-from .recorder import recordApiRequest
+from ..extensions import (
+    auth, limiter, handleApiPermission, record
+)
 from ..scraper_lib.pixiv_client import IllustGetter
 from ..scraper_lib.twitter_client import TweetGetter
 from ..scraper_lib.seiga_client import SeigaGetter
