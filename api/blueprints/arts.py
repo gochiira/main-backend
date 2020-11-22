@@ -1053,6 +1053,11 @@ def getArtComments(illustID):
         + f"ORDER BY {sortMethod} {order} "
         + f"LIMIT {per_page} OFFSET {per_page * (pageID - 1)}"
     )
+    if len(resp) == 0:
+        return jsonify(
+            status=404,
+            message="not found"
+        )
     if not resp:
         return jsonify(status=500, message="Server bombed.")
     return jsonify(
