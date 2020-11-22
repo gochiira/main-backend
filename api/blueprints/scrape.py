@@ -14,8 +14,20 @@ import os.path
 import shutil
 from imghdr import what as what_img
 from imghdr import tests
+from os import environ
+from dotenv import load_dotenv
 
-CDN_ADDRESS = "https://api.gochiusa.team/static/temp/"
+# .env読み込み
+load_dotenv(verbose=True, override=True)
+
+CDN_ADDRESS = f"{environ.get('API_OWN_ADDRESS')}/static/temp/"
+TWITTER_CONSUMER_KEY = environ.get('API_TWITTER_CONSUMER_KEY')
+TWITTER_CONSUMER_SECRET = environ.get('API_TWITTER_CONSUMER_SECRET')
+TWITTER_AUTH_TOKEN = environ.get('API_TWITTER_AUTH_TOKEN')
+TWITTER_AUTH_SECRET = environ.get('API_TWITTER_AUTH_SECRET')
+PIXIV_AUTH = environ.get('API_PIXIV_FILE')
+NICONICO_AUTH = environ.get('API_NICONICO_FILE')
+
 ALLOWED_EXTENSIONS = ["gif", "png", "jpg", "jpeg", "webp"]
 JPEG_MARK = b'\xff\xd8\xff\xdb\x00C\x00\x08\x06\x06' \
     b'\x07\x06\x05\x08\x07\x07\x07\t\t\x08\n\x0c\x14\r\x0c\x0b\x0b\x0c\x19\x12\x13\x0f'
@@ -59,7 +71,12 @@ def getArtByTwitter():
         return jsonify(status='400', message='bad request')
     if 'url' not in params.keys():
         return jsonify(status='400', message='bad request')
-    tg = TweetGetter('blueprints/lib/twitter_auth.json')
+    tg = TweetGetter(
+        TWITTER_CONSUMER_KEY,
+        TWITTER_CONSUMER_SECRET,
+        TWITTER_AUTH_TOKEN,
+        TWITTER_AUTH_SECRET
+    )
     # 雑なエラー対応
     if params['url'].find("?") != -1:
         params['url'] = params['url'][:params['url'].find("?")]
@@ -81,7 +98,7 @@ def getArtByPixiv():
         return jsonify(status='400', message='bad request')
     if 'url' not in params.keys():
         return jsonify(status='400', message='bad request')
-    ig = IllustGetter('blueprints/lib/pixiv_auth.json')
+    ig = IllustGetter(PIXIV_AUTH)
     # 雑なエラー対応
     if params['url'].find("?") != -1:
         params['url'] = params['url'][:params["url"].find('?')]
@@ -91,8 +108,7 @@ def getArtByPixiv():
     for i, img in enumerate(resp["illust"]["imgs"]):
         fileName = os.path.basename(img['thumb_src'])
         if not os.path.isfile('static/temp/'+fileName):
-            filePath = current_app.config['TEMP_FOLDER']
-            path = os.path.join(filePath, fileName)
+            path = os.path.join('static/temp', fileName)
             ig.downloadIllust(img['thumb_src'], path=path)
         resp["illust"]["imgs"][i]['thumb_src'] = CDN_ADDRESS + fileName
     return jsonify(status='200', message='ok', data=resp)
@@ -109,7 +125,7 @@ def getArtByNicoNicoSeiga():
         return jsonify(status='400', message='bad request')
     if 'url' not in params.keys():
         return jsonify(status='400', message='bad request')
-    sg = SeigaGetter('blueprints/lib/seiga_auth.json')
+    sg = SeigaGetter(NICONICO_AUTH)
     # 雑なエラー対応
     if params['url'].find("?") != -1:
         params['url'] = params['url'][:params['url'].find("?")]
@@ -185,7 +201,7 @@ def getArtBySelf():
             return jsonify(status=400, message="The file is not allowed")
         # 大丈夫そうなので保存
         filePath = os.path.join(
-            current_app.config['TEMP_FOLDER'],
+            'static/temp',
             uniqueID + ".raw"
         )
         shutil.copy2(tempPath, filePath)
