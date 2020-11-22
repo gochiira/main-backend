@@ -1,6 +1,6 @@
 from flask import Blueprint, g, request, jsonify, escape, current_app
 from ..extensions import (
-    auth, limiter, handleApiPermission, record
+    auth, limiter, handleApiPermission, record, cache
 )
 from ..worker import processConvertRequest
 from datetime import datetime
