@@ -57,9 +57,7 @@ def registerIllust(params):
         real_orig_path = orig_path
         # 何枚目の画像を保存するかはURLパラメータで見る
         page = 0
-        if "?" in origin_url\
-            and "192.168.0.3" not in origin_url\
-                and "cdn.gochiusa.team" not in origin_url:
+        if "?" in origin_url and params["own_address"] not in origin_url:
             query = parse_qs(origin_url[origin_url.find("?")+1:])
             page = int(query["page"][0]) - 1
             origin_url = origin_url[:origin_url.find("?")]

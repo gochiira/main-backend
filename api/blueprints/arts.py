@@ -141,6 +141,7 @@ def createArt():
     ]
     params["pixiv"] = PIXIV_AUTH
     params["niconico"] = NICONICO_AUTH
+    params["own_address"] = OWN_ADDRESS
     # Workerにパラメータを投げる
     if not current_app.debug:
         q = Queue(
