@@ -83,7 +83,8 @@ def registerIllust(params):
             img_addr = dg.getIllustSourceUrl(origin_url)
             dg.downloadIllust(img_addr, orig_path)
         # Boothから取る場合
-        elif origin_url.startswith("https://booth.pm/ja/items/"):
+        elif origin_url.startswith("https://booth.pm/ja/items/")\
+                or "booth.pm/items/" in origin_url:
             bg = BoothGetter()
             imgs = bg.getIllustSourceUrl(origin_url)
             img_addr = imgs[page]
