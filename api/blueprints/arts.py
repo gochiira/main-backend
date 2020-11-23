@@ -36,6 +36,10 @@ TWITTER_AUTH_TOKEN = environ.get('API_TWITTER_AUTH_TOKEN')
 TWITTER_AUTH_SECRET = environ.get('API_TWITTER_AUTH_SECRET')
 PIXIV_AUTH = environ.get('API_PIXIV_FILE')
 NICONICO_AUTH = environ.get('API_NICONICO_FILE')
+TELEGRAM_TOKEN = environ.get('API_TELEGRAM_TOKEN')
+ONESIGNAL_APPID = environ.get('API_ONESIGNAL_APPID')
+ONESIGNAL_TOKEN = environ.get('API_ONESIGNAL_TOKEN')
+
 
 arts_api = Blueprint('arts_api', __name__)
 
@@ -141,6 +145,11 @@ def createArt():
     ]
     params["pixiv"] = PIXIV_AUTH
     params["niconico"] = NICONICO_AUTH
+    params["telegram"] = NICONICO_AUTH
+    params["onesignal"] = [
+        ONESIGNAL_APPID,
+        ONESIGNAL_TOKEN
+    ]
     params["own_address"] = OWN_ADDRESS
     # Workerにパラメータを投げる
     if not current_app.debug:
