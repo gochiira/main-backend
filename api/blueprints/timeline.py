@@ -101,11 +101,42 @@ def removeFollow():
         return jsonify(status=500, message="Server bombed.")
 
 
+@timeline_api.route('/following', methods=["GET"], strict_slashes=False)
+@auth.login_required
+@limiter.limit(handleApiPermission)
+def listFollow():
+    follows = g.db.get(
+        """SELECT followType, followID
+        FROM data_timeline
+        WHERE userID=%s""",
+        (g.userID,)
+    )
+    if follows:
+        return jsonify(
+            status=200,
+            message="found",
+            data={
+                "title": "フォローリスト",
+                "count": len(follows),
+                "current": 1,
+                "pages": 1,
+                "contents": {
+                    "tag": [f[1] for f in follows if f[0] == 0],
+                    "chara": [f[1] for f in follows if f[0] == 1],
+                    "group": [f[1] for f in follows if f[0] == 2],
+                    "system": [f[1] for f in follows if f[0] == 3],
+                    "artist": [f[1] for f in follows if f[0] == 4]
+                }
+            }
+        )
+    else:
+        return jsonify(status=404, message="You are not following.")
+
+
 @timeline_api.route('/', methods=["GET"], strict_slashes=False)
 @auth.login_required
 @limiter.limit(handleApiPermission)
 def getTimeline():
-    # あんまり長いと負荷がかかりそうなので制限が要るかも
     # タグID一覧フィルタを錬成
     tagIDs = g.db.get(
         """SELECT followID FROM `data_timeline` WHERE followType!=4
