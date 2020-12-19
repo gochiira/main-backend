@@ -53,7 +53,7 @@ def addFollow():
 @timeline_api.route('/unfollow', methods=["POST"], strict_slashes=False)
 @auth.login_required
 @limiter.limit(handleApiPermission)
-def removeFollow(charaID):
+def removeFollow():
     if not request.is_json:
         return jsonify(
             status=400,
@@ -69,13 +69,19 @@ def removeFollow(charaID):
     params = {p: g.validate(params[p]) for p in params.keys()}
     follow_type = params.get("followType")
     follow_id = params.get("followID")
-    if g.db.has(
+    if not g.db.has(
         "data_timeline",
         "followType=%s AND followID=%s",
         (follow_type, follow_id)
     ):
-        return jsonify(status=400, message="You already following.")
-    resp = g.db.edit("DELETE FROM info_tag WHERE tagID = %s", (charaID,))
+        return jsonify(status=400, message="You are not following.")
+    resp = g.db.edit(
+        """DELETE FROM data_timeline
+        WHERE userID =%s
+        AND followType=%s
+        AND followID=%s""",
+        (g.userID, follow_type, follow_id)
+    )
     if resp:
         return jsonify(status=200, message="Delete succeed.")
     else:
