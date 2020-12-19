@@ -32,6 +32,19 @@ def addFollow():
     params = {p: g.validate(params[p]) for p in params.keys()}
     follow_type = params.get("followType")
     follow_id = params.get("followID")
+    # フォロー数はタグ/絵師合わせて30までに制限
+    follow_count = g.db.get(
+        """SELECT COUNT(timelineID) FROM data_timeline
+        WHERE userID =%s
+        AND followType=%s
+        AND followID=%s""",
+        (g.usrIeD, follow_type, follow_id)
+    )
+    if len(follow_count) >= 30:
+        return jsonify(
+            status=400,
+            message="Maximum follow count reached.\nYou must reduce follow."
+        )
     if g.db.has(
         "data_timeline",
         "followType=%s AND followID=%s",
