@@ -17,7 +17,7 @@ from api.blueprints import (
     news_api, notify_api, invites_api,
     superuser_api, mylist_api, toymoney_api,
     wiki_api, mute_api, uploaders_api,
-    ranking_api
+    ranking_api, timeline_api
 )
 from api.extensions import (
     limiter, cache
@@ -57,6 +57,7 @@ def createApp():
     app.register_blueprint(mute_api, url_prefix='/mute')
     app.register_blueprint(uploaders_api, url_prefix='/uploaders')
     app.register_blueprint(ranking_api, url_prefix='/ranking')
+    app.register_blueprint(timeline_api, url_prefix='/timeline')
     # リクエスト共通処理の登録
     app.before_request(app_before_request)
     app.after_request(app_after_request)

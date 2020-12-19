@@ -17,6 +17,7 @@ from .wiki import wiki_api
 from .mute import mute_api
 from .uploaders import uploaders_api
 from .ranking import ranking_api
+from .timeline import timeline_api
 
 
 __all__ = [
@@ -38,5 +39,6 @@ __all__ = [
     "wiki_api",
     "mute_api",
     "uploaders_api",
-    "ranking_api"
+    "ranking_api",
+    "timeline_api"
 ]
