@@ -125,12 +125,25 @@ def listTags():
     if extra_page > 0:
         pages += 1
     datas = g.db.get(
-        f"""SELECT tagID,tagName,tagDescription,tagNsfw,CNT,LIKES,LAST_UPDATE
-        FROM info_tag NATURAL JOIN ( SELECT tagID, COUNT(tagID) AS CNT,
-        MAX(illustID) AS LAST_UPDATE FROM data_tag NATURAL JOIN info_tag
-        GROUP BY tagID) AS T1 NATURAL JOIN
-        ( SELECT tagID, SUM(illustLike) AS LIKES FROM data_illust
-        NATURAL JOIN data_tag GROUP BY tagID ) AS T2
+        f"""SELECT
+        tagID,tagName,tagDescription,tagNsfw,CNT,LIKES,LAST_UPDATE
+        FROM info_tag
+        NATURAL JOIN (
+            SELECT
+                tagID,
+                COUNT(tagID) AS CNT,
+                MAX(illustID) AS LAST_UPDATE
+            FROM data_tag
+            NATURAL JOIN info_tag
+            GROUP BY tagID
+        ) AS T1 NATURAL JOIN (
+            SELECT
+                tagID,
+                SUM(illustLike) AS LIKES
+            FROM data_illust
+            NATURAL JOIN data_tag
+            GROUP BY tagID
+        ) AS T2
         WHERE tagName LIKE %s ORDER BY {sortMethod} {order}
         LIMIT {per_page} OFFSET {per_page*(pageID-1)}""",
         (f'%{keyword}%', )
