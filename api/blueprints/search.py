@@ -1,4 +1,7 @@
 from flask import Blueprint, g, request, jsonify, escape
+from ..db_helper import (
+    getMylistCountDict, getMylistedDict, getSearchCountResult
+)
 from ..extensions import (
     auth, limiter, handleApiPermission, cache, record
 )
@@ -48,49 +51,6 @@ def isNotAllowedFile(filename):
             not in ALLOWED_EXTENSIONS):
         return True
     return False
-
-
-def getMylistCountDict(illustIDs):
-    illustKey = ",".join([str(i) for i in illustIDs])
-    mylistData = {
-        i[0]: i[1]
-        for i in g.db.get(
-            f"""SELECT illustID, COUNT(mylistID) FROM data_mylist
-            GROUP BY illustID
-            HAVING illustID IN ({illustKey})"""
-        )
-    }
-    mylistDict = {
-        str(i): mylistData[i]
-        if i in mylistData else 0
-        for i in illustIDs
-    }
-    return mylistDict
-
-
-def getMylistedDict(illustIDs):
-    illustKey = ",".join([str(i) for i in illustIDs])
-    mylistedData = g.db.get(
-        f"""SELECT illustID FROM data_mylist
-        WHERE mylistID IN
-        (SELECT mylistID FROM info_mylist WHERE userID={g.userID})
-        AND illustID IN ({illustKey})"""
-    )
-    mylistedData = [i[0] for i in mylistedData]
-    mylistedDict = {
-        str(i): True if i in mylistedData else False
-        for i in illustIDs
-    }
-    return mylistedDict
-
-
-def getSearchCountResult(whereSql, placeholder=()):
-    illustCount = g.db.get(
-        f"""SELECT COUNT(DISTINCT illustID) FROM data_illust
-            WHERE {whereSql}""",
-        placeholder
-    )
-    return illustCount[0][0]
 
 
 def getSearchResult(whereSql, illustCount, resultTitle, placeholder=()):

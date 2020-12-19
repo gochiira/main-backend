@@ -1,27 +1,10 @@
 from flask import Flask, g, request, jsonify, Blueprint, current_app
+from ..db_helper import getMylistCountDict
 from ..extensions import (
     auth, limiter, handleApiPermission, record
 )
 
 mylist_api = Blueprint('mylist_api', __name__)
-
-
-def getMylistCountDict(illustIDs):
-    illustKey = ",".join([str(i) for i in illustIDs])
-    mylistData = {
-        i[0]: i[1]
-        for i in g.db.get(
-            "SELECT illustID, COUNT(mylistID) FROM data_mylist "
-            + "GROUP BY illustID "
-            + f"HAVING illustID IN ({illustKey})"
-        )
-    }
-    mylistDict = {
-        str(i): mylistData[i]
-        if i in mylistData else 0
-        for i in illustIDs
-    }
-    return mylistDict
 
 
 @mylist_api.route('/', methods=["POST"], strict_slashes=False)
