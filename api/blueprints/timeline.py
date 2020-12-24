@@ -23,22 +23,22 @@ def addFollow():
             message="Request parameters are not satisfied."
         )
     params = request.get_json()
-    if "followType" not in params.keys()\
-            or "followID" not in params.keys():
+    if "type" not in params.keys()\
+            or "id" not in params.keys():
         return jsonify(
             status=400,
             message="Request parameters are not satisfied."
         )
-    params = {p: g.validate(params[p]) for p in params.keys()}
-    follow_type = params.get("followType")
-    follow_id = params.get("followID")
+    params = {p: int(params[p]) for p in params.keys()}
+    follow_type = params.get("type")
+    follow_id = params.get("id")
     # フォロー数はタグ/絵師合わせて30までに制限
     follow_count = g.db.get(
         """SELECT COUNT(timelineID) FROM data_timeline
         WHERE userID =%s
         AND followType=%s
         AND followID=%s""",
-        (g.usrIeD, follow_type, follow_id)
+        (g.userID, follow_type, follow_id)
     )
     if len(follow_count) >= 30:
         return jsonify(
@@ -73,15 +73,15 @@ def removeFollow():
             message="Request parameters are not satisfied."
         )
     params = request.get_json()
-    if "followType" not in params.keys()\
-            or "followID" not in params.keys():
+    if "type" not in params.keys()\
+            or "id" not in params.keys():
         return jsonify(
             status=400,
             message="Request parameters are not satisfied."
         )
-    params = {p: g.validate(params[p]) for p in params.keys()}
-    follow_type = params.get("followType")
-    follow_id = params.get("followID")
+    params = {p: int(params[p]) for p in params.keys()}
+    follow_type = params.get("type")
+    follow_id = params.get("id")
     if not g.db.has(
         "data_timeline",
         "followType=%s AND followID=%s",
@@ -121,11 +121,8 @@ def listFollow():
                 "current": 1,
                 "pages": 1,
                 "contents": {
-                    "tag": [f[1] for f in follows if f[0] == 0],
-                    "chara": [f[1] for f in follows if f[0] == 1],
-                    "group": [f[1] for f in follows if f[0] == 2],
-                    "system": [f[1] for f in follows if f[0] == 3],
-                    "artist": [f[1] for f in follows if f[0] == 4]
+                    "tag": [f[1] for f in follows if f[0] == 1],
+                    "artist": [f[1] for f in follows if f[0] == 2]
                 }
             }
         )
@@ -137,22 +134,6 @@ def listFollow():
 @auth.login_required
 @limiter.limit(handleApiPermission)
 def getTimeline():
-    # タグID一覧フィルタを錬成
-    tagIDs = g.db.get(
-        """SELECT followID FROM `data_timeline` WHERE followType!=4
-        AND userID=%s""",
-        (g.userID,)
-    )
-    filterTag = '(' + ",".join([str(t[0]) for t in tagIDs]) + ')'
-    filterTag = '(0)' if filterTag == "()" else filterTag
-    # 絵師ID一覧フィルタを錬成
-    artistIDs = g.db.get(
-        """SELECT followID FROM `data_timeline` WHERE followType=4
-        AND userID=%s""",
-        (g.userID,)
-    )
-    filterArtist = '(' + ",".join([str(a[0]) for a in artistIDs]) + ')'
-    filterArtist = '(0)' if filterArtist == "()" else filterArtist
     # 条件を満たすイラストIDを取得
     illustIDs = g.db.get(
         f"""SELECT
@@ -161,13 +142,20 @@ def getTimeline():
             (
                 SELECT illustID
                 FROM data_tag
-                WHERE tagID IN {filterTag}
+                WHERE tagID IN (
+                    SELECT followID FROM `data_timeline`
+                    WHERE followType=1 AND userID=%s
+                )
             ) UNION (
                 SELECT illustID
                 FROM data_illust
-                WHERE artistID IN {filterArtist}
+                WHERE artistID IN (
+                    SELECT followID FROM `data_timeline`
+                    WHERE followType=2 AND userID=%s
+                )
             )
-        ) AS T1"""
+        ) AS T1""",
+        (g.userID, g.userID)
     )
     illustCount = len(illustIDs)
     if illustCount == 0:

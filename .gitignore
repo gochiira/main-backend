@@ -110,3 +110,9 @@ static/illusts/
 db_data
 api_data
 auth/
+docker/toydb_data/*
+docker/db_data/*
+bfg.jar
+docker/.toymoney_env
+remove_jpg_png_webp.txt
+remove_text.txt
