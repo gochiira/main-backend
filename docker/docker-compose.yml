@@ -1,55 +1,90 @@
 version: '3.8'
 
 services:
-  db:
-    container_name: gcir_mariadb
-    hostname: mariadb
+  gcir_db:
+    container_name: gcir_db
+    hostname: gcir_db
     image: mariadb
     restart: always
     command: mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_general_ci
     volumes:
       - ${VOLUME_DB_PATH}:/var/lib/mysql:delegated
     ports:
-      - ${PORT_DB}:3306
+      - 3306:3306
     environment:
+      - MYSQL_ROOT_Host=%
       - MYSQL_ROOT_PASSWORD=${DB_ROOT}
-      - MYSQL_DATABASE=${DB_NAME}
+      - MYSQL_DATABASE=gcir_core_db
       - MYSQL_USER=${DB_USER}
       - MYSQL_PASSWORD=${DB_PASS}
-  redis:
+  gcir_redis:
     container_name: gcir_redis
-    hostname: redis
+    hostname: gcir_redis
     image: redis:latest
     restart: always
-    ports:
-      - ${PORT_REDIS}:6379
-  adminer:
-    container_name: gcir_adminer
-    hostname: adminer
-    image: adminer
-    restart: always
-    ports:
-      - ${PORT_ADMINER}:8080
-    depends_on:
-      - db
-  api:
+  gcir_api:
     build:
       context: ../
       dockerfile: docker/Dockerfile_amd64
     container_name: gcir_api
+    hostname: gcir_api
     volumes:
       - ${VOLUME_API_PATH}:/usr/local/app/static
     ports:
-      - ${PORT_API}:5000
+      - 5000:5000
     depends_on:
-      - db
-      - redis
-  worker:
+      - gcir_db
+      - gcir_redis
+  gcir_worker:
+    container_name: gcir_worker
+    hostname: gcir_worker
     build:
       context: ../
       dockerfile: docker/Dockerfile_worker
-    container_name: gcir_worker
     volumes:
       - ${VOLUME_API_PATH}:/usr/local/app
     depends_on:
-      - redis
+      - gcir_api
+      - gcir_redis
+  toymoney_db:
+    container_name: toymoney_db
+    hostname: toymoney_db
+    image: mariadb
+    restart: always
+    command: mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_general_ci
+    volumes:
+      - ${VOLUME_TOYDB_PATH}:/var/lib/mysql:delegated
+    ports:
+      - 3307:3306
+    environment:
+      - MYSQL_ROOT_Host='%'
+      - MYSQL_ROOT_PASSWORD=${DB_ROOT}
+      - MYSQL_DATABASE=toymoney_db
+      - MYSQL_USER=${DB_USER}
+      - MYSQL_PASSWORD=${DB_PASS}
+  toymoney_api:
+    container_name: toymoney_api
+    hostname: toymoney_api
+    image: dosugamea/toymoney-server
+    environment:
+      - SALT='UNSAFE_SECRET_KEY'
+      - DB_TYPE='mysql'
+      - DB_USER='gcir_api_admin'
+      - DB_PASS='gcirsaveillusts'
+      - DB_HOST='toymoney_db'
+      - DB_NAME='toymoney_db'
+      - DB_ROOT='GCIR_ROOT_PASS'
+    ports:
+      - 7070:5000
+    depends_on:
+      - toymoney_db
+  adminer:
+    container_name: adminer
+    hostname: adminer
+    image: adminer
+    restart: always
+    ports:
+      - 8080:8080
+    depends_on:
+      - gcir_db
+      - toymoney_db

@@ -96,7 +96,7 @@ def removeFollow():
         (g.userID, follow_type, follow_id)
     )
     if resp:
-        return jsonify(status=200, message="Delete succeed.")
+        return jsonify(status=200, message="Remove succeed.")
     else:
         return jsonify(status=500, message="Server bombed.")
 

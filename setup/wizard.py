@@ -18,14 +18,21 @@ def getUserInput(variable_name, default=None):
 
 
 class NuxtImageBoardSetup():
-    TOYMONEY_PASSWORD_HEAD = environ.get('TOYMONEY_PASSWORD_HEAD')
-    TOYMONEY_ENDPOINT = environ.get('TOYMONEY_ENDPOINT')
-    TOYMONEY_TOKEN = environ.get('TOYMONEY_TOKEN')
-    SALT_INVITE = environ.get('SALT_INVITE')
-    SALT_PASS = environ.get('SALT_PASS')
-    SALT_JWT = environ.get('SALT_JWT')
-
-    def __init__(self, host, port, user, password, database, headless=False):
+    def __init__(
+        self,
+        host,
+        port,
+        user,
+        password,
+        database,
+        toymoney_pass_head,
+        toymoney_endpoint,
+        toymoney_token,
+        salt_invite,
+        salt_pass,
+        salt_jwt,
+        headless=False
+    ):
         self.conn = mysql.connector.connect(
             host=host,
             port=port,
@@ -34,6 +41,12 @@ class NuxtImageBoardSetup():
             database=database
         )
         self.cursor = self.conn.cursor()
+        self.TOYMONEY_PASSWORD_HEAD = toymoney_pass_head
+        self.TOYMONEY_ENDPOINT = toymoney_endpoint
+        self.TOYMONEY_TOKEN = toymoney_token
+        self.SALT_INVITE = salt_invite
+        self.SALT_PASS = salt_pass
+        self.SALT_JWT = salt_jwt
         if headless:
             self.createDatabase()
             self.createMainApiUser(self.createSubApiUser())
@@ -58,7 +71,6 @@ class NuxtImageBoardSetup():
         if toyApiResp.status_code != 200:
             raise Exception("ToyMoneyへのリクエストに失敗しました")
         resp = toyApiResp.json()
-        print(resp)
         return resp["apiKey"]
 
     def generateApiKey(self, accountID):
@@ -146,11 +158,11 @@ if __name__ == "__main__":
     db_name = getUserInput("database name", "nuxt_image_board")
     cl = NuxtImageBoardSetup(db_host, db_port, db_user, db_pass, db_name)
     while True:
-        print("""実行したい操作を入力してください
-            1: データベース作成
-            2: ユーザー作成
-            3: 招待コード作成
-            4: 終了""")
+        print("""Input operation
+            1: Create database
+            2: Create user
+            3: Create invitation
+            4: Exit""")
         op_type = 0
         while op_type not in [1, 2, 3, 4]:
             op_number = getUserInput("operation number", "1")
@@ -183,7 +195,7 @@ if __name__ == "__main__":
             print(f"Api key: {api_key}")
         elif op_type == 3:
             print("Creating invite...")
-            user_id = int(getUserInput("user id", "1"))
+            user_id = int(getUserInput("inviter user id", "1"))
             invite_code = getUserInput("invite code", "RANDOM")
             code_count = int(getUserInput("code count", "1"))
             codes = cl.createInvitation(
