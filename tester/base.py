@@ -1,17 +1,8 @@
 import requests
 
-'''
-権限9
-Bearer eyJhbGciOiJIUzI1NiJ9.eyJpZCI6Miwic2VxIjoxLCJwZXJtaXNzaW9uIjo5fQ.tLS3QO91IWv80TyH_KZTHo6wMSG2csAN0jQFWk4Zo2U
-
-権限5
-eyJhbGciOiJIUzI1NiJ9.eyJpZCI6MSwic2VxIjoyLCJwZXJtaXNzaW9uIjo1fQ.5_UXRraCZuqOPs5X53czpm_pQhpEaudpSu5ujZOrbLU
-
-'''
-
 
 class BaseClient():
-    def __init__(self, address="http://localhost:5000", token="eyJhbGciOiJIUzI1NiJ9.eyJpZCI6Miwic2VxIjoxLCJwZXJtaXNzaW9uIjo5fQ.tLS3QO91IWv80TyH_KZTHo6wMSG2csAN0jQFWk4Zo2U"):
+    def __init__(self, address, token):
         self.address = address
         self.headers = {
             "Authorization": "Bearer " + token,
