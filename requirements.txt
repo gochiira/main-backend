@@ -11,7 +11,7 @@ itsdangerous==0.24
 # Image search
 ImageHash==4.0
 # Image process
-Pillow==7.1.1
+Pillow==8.2.0
 hurry.filesize==0.9
 # Server runner
 gunicorn==20.0.4
