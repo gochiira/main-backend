@@ -2,7 +2,7 @@
 itsdangerous==0.24
 # Image process
 ImageHash==4.0
-Pillow==7.1.1
+Pillow==9.0.0
 hurry.filesize==0.9
 # Database
 mysql-connector-python==8.0.19
